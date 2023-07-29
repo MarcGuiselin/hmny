@@ -1,4 +1,5 @@
 use bevy::{prelude::*, window::PresentMode};
+use bevy_framepace::FramepacePlugin;
 
 mod dimension;
 use dimension::DimensionPlugin;
@@ -11,11 +12,15 @@ impl Plugin for HarmonyPlugin {
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Harmony Browser".into(),
-                    present_mode: PresentMode::AutoVsync,
+                    // Disable vsync to lower input latency
+                    // Done by examples in https://github.com/aevyrie/bevy_mod_picking
+                    // See this issue: https://github.com/aevyrie/bevy_mod_raycast/issues/14
+                    present_mode: PresentMode::AutoNoVsync,
                     ..default()
                 }),
                 ..default()
             }),
+            FramepacePlugin,
             DimensionPlugin,
         ));
     }
