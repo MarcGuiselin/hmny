@@ -1,6 +1,8 @@
 # The Harmony Browser Engine
 
-## Run Harmony Browser 
+## Development
+
+### Run Harmony Browser 
 
 Run the following command:
 
@@ -8,7 +10,7 @@ Run the following command:
 cargo run
 ```
 
-## How to build elements
+### How to build elements
 
 Run the following command:
 
