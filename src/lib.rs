@@ -2,7 +2,7 @@ use bevy::{prelude::*, window::PresentMode};
 use bevy_framepace::FramepacePlugin;
 
 mod dimension;
-use dimension::DimensionPlugin;
+mod element;
 
 pub struct HarmonyPlugin;
 
@@ -21,7 +21,9 @@ impl Plugin for HarmonyPlugin {
                 ..default()
             }),
             FramepacePlugin,
-            DimensionPlugin,
+            // Harmony Core Plugins
+            dimension::DimensionPlugin,
+            element::ElementPlugin,
         ));
     }
 }
