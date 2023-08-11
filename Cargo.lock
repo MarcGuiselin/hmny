@@ -2127,6 +2127,7 @@ version = "0.0.1-dev"
 dependencies = [
  "bevy",
  "bevy_framepace",
+ "notify",
  "urn",
  "wasmer",
 ]
