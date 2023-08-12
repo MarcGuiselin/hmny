@@ -1,6 +1,8 @@
+use super::Elements;
 use bevy::prelude::*;
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Result, Watcher};
 use std::{
+    fs,
     path::Path,
     sync::{
         mpsc::{Receiver, TryRecvError},
@@ -57,7 +59,25 @@ impl Default for ElementFileWatcher {
     }
 }
 
-fn elements_file_watcher_system(file_watcher: Res<ElementFileWatcher>) {
+fn elements_load_from_dir_system(mut elements: ResMut<Elements>) {
+    let paths = fs::read_dir(ELEMENTS_LOAD_DIR).expect("Failed to read elements load directory");
+
+    paths.into_iter().for_each(|path| {
+        let path = path.unwrap().path();
+
+        match path.extension() {
+            Some(ext) if ext == "wasm" => {
+                elements.load_from_path(path).unwrap();
+            }
+            _ => {}
+        }
+    });
+}
+
+fn elements_file_watcher_system(
+    mut elements: ResMut<Elements>,
+    file_watcher: Res<ElementFileWatcher>,
+) {
     if let Ok(receiver) = file_watcher.inner.receiver.lock() {
         loop {
             let Event { kind, paths, .. } = match receiver.try_recv() {
@@ -71,10 +91,10 @@ fn elements_file_watcher_system(file_watcher: Res<ElementFileWatcher>) {
                 match path.extension() {
                     Some(ext) if ext == "wasm" => match kind {
                         EventKind::Create(_) => {
-                            println!("Load: {:?}", path.file_stem());
+                            elements.load_from_path(path).unwrap();
                         }
                         EventKind::Remove(_) => {
-                            println!("Unload: {:?}", path.file_stem());
+                            elements.unload_from_path(path).unwrap();
                         }
                         _ => {
                             println!("Unknown file watcher event: {:?} {:?}", path, kind);
@@ -90,6 +110,7 @@ fn elements_file_watcher_system(file_watcher: Res<ElementFileWatcher>) {
 impl Plugin for ElementFileWatcherPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ElementFileWatcher>()
+            .add_systems(PreStartup, elements_load_from_dir_system)
             .add_systems(PostUpdate, elements_file_watcher_system);
     }
 }
