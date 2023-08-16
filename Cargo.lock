@@ -1019,6 +1019,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "bincode"
+version = "2.0.0-rc.3"
+source = "git+https://github.com/bincode-org/bincode.git?rev=aada4bb4cb457677a4b8e47572ae7ca8dd44927c#aada4bb4cb457677a4b8e47572ae7ca8dd44927c"
+dependencies = [
+ "bincode_derive",
+ "serde",
+]
+
+[[package]]
+name = "bincode_derive"
+version = "2.0.0-rc.3"
+source = "git+https://github.com/bincode-org/bincode.git?rev=aada4bb4cb457677a4b8e47572ae7ca8dd44927c#aada4bb4cb457677a4b8e47572ae7ca8dd44927c"
+dependencies = [
+ "virtue",
+]
+
+[[package]]
 name = "bindgen"
 version = "0.64.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2127,9 +2144,17 @@ version = "0.0.1-dev"
 dependencies = [
  "bevy",
  "bevy_framepace",
+ "hmny_common",
  "notify",
  "urn",
  "wasmer",
+]
+
+[[package]]
+name = "hmny_common"
+version = "0.0.1-dev"
+dependencies = [
+ "bincode",
 ]
 
 [[package]]
@@ -3515,6 +3540,9 @@ dependencies = [
 [[package]]
 name = "test_element"
 version = "0.0.1-dev"
+dependencies = [
+ "hmny_common",
+]
 
 [[package]]
 name = "thiserror"
@@ -3767,6 +3795,12 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+
+[[package]]
+name = "virtue"
+version = "0.0.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9dcc60c0624df774c82a0ef104151231d37da4962957d691c011c852b2473314"
 
 [[package]]
 name = "waker-fn"

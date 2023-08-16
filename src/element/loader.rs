@@ -1,9 +1,7 @@
 use bevy::{prelude::*, utils::HashMap};
+use hmny_common::prelude::*;
 use std::fs;
 use std::path::Path;
-use urn::Urn;
-
-use crate::element;
 
 pub struct ElementLoaderPlugin;
 
@@ -18,10 +16,14 @@ pub enum SignalError {
     ExportError(wasmer::ExportError),
     MemoryAccessFailed(wasmer::MemoryAccessError),
     CallFailed(wasmer::RuntimeError),
+    ElementError(ElementError),
+    DecodeFailed(String),
+    EncodeFailed(String),
+    UnsupportedInterfaceVersion(InterfaceVersion),
 }
 
 impl LoadedElement {
-    pub fn send_signal(&mut self, input: &[u8]) -> Result<Vec<u8>, SignalError> {
+    fn send_raw_signal(&mut self, input: &[u8]) -> Result<Vec<u8>, SignalError> {
         // Writes and creates a 1mb vector of numbers
         let input_pointer = 0;
 
@@ -37,17 +39,51 @@ impl LoadedElement {
             .map_err(SignalError::MemoryAccessFailed)?;
 
         // Calls the wasm function
-        let output_length = self
+        let output = self
             .signal
             .call(&mut self.store, input_pointer, input.len() as _)
             .map_err(SignalError::CallFailed)?;
 
+        // Break out length and pointer from u64
+        let output_length = (output & 0xFFFFFFFF) as usize;
+        let output_ptr = output >> 32;
+
         // Read output buffer
         let memory_view = memory.view(&self.store);
-        let mut output = vec![0u8; output_length as usize];
+        let mut output = vec![0u8; output_length];
         memory_view
-            .read(input_pointer, &mut output[..])
+            .read(output_ptr, &mut output[..])
             .map_err(SignalError::MemoryAccessFailed)?;
+
+        Ok(output)
+    }
+
+    pub fn send_signal(&mut self, input: &Signal) -> Result<Signal, SignalError> {
+        let config = bincode::config::standard();
+
+        let payload = bincode::encode_to_vec(input, config)
+            .map_err(|error| SignalError::EncodeFailed(format!("{}", error)))?;
+
+        let packet = SignalPacket::new(ElementType::None, Ok(payload));
+        let raw_packet = bincode::encode_to_vec(packet, config)
+            .map_err(|error| SignalError::EncodeFailed(format!("{}", error)))?;
+
+        let raw_output = self.send_raw_signal(&raw_packet[..])?;
+
+        let (output, _) = bincode::decode_from_slice(&raw_output[..], config)
+            .map_err(|error| SignalError::DecodeFailed(format!("{}", error)))?;
+        let SignalPacket {
+            payload, version, ..
+        } = output;
+
+        if !version.matches_own() {
+            return Err(SignalError::UnsupportedInterfaceVersion(version));
+        }
+
+        let payload = payload.map_err(SignalError::ElementError)?;
+
+        let (output, _) = bincode::decode_from_slice(&payload[..], config)
+            .map_err(|error| SignalError::DecodeFailed(format!("{}", error)))?;
 
         Ok(output)
     }
@@ -57,7 +93,7 @@ impl LoadedElement {
 pub enum ElementLoaderError {
     FileNotFound,
     InvalidWasm(wasmer::CompileError),
-    LoadMetadataError(SignalError),
+    SignalError(SignalError),
 }
 
 #[derive(Resource)]
@@ -122,10 +158,12 @@ impl Elements {
         };
 
         // Load metadata
-        let data = vec![0u8; 10];
+        let signal = Signal::Ping {
+            message: "Harmony core".into(),
+        };
         let metadata = element
-            .send_signal(&data[..])
-            .map_err(ElementLoaderError::LoadMetadataError)?;
+            .send_signal(&signal)
+            .map_err(ElementLoaderError::SignalError)?;
 
         // Store element
         // Unload existing element if it exists
