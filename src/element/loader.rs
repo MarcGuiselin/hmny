@@ -28,6 +28,7 @@ pub enum SignalError {
     DecodeFailed(String),
     EncodeFailed(String),
     UnsupportedInterfaceVersion(InterfaceVersion),
+    ElementDoesNotExist,
 }
 
 fn mem_slice_mut(slice: &mut [u8], lower: usize) -> Result<&mut [u8], SignalError> {
@@ -196,7 +197,8 @@ pub enum ElementLoaderError {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
-enum ElementKey {
+pub enum ElementKey {
+    HomeScreen,
     Other(ElementType, String),
 }
 
@@ -254,7 +256,11 @@ impl Elements {
         let ElementMetdata {
             element_type, name, ..
         } = element.get_metadata();
-        ElementKey::Other(element_type.clone(), name.into())
+        match element_type {
+            // Only one homescreen is loaded at a time
+            ElementType::HomeScreen => ElementKey::HomeScreen,
+            _ => ElementKey::Other(element_type.clone(), name.into()),
+        }
     }
 
     pub fn unload_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<(), ElementLoaderError> {
@@ -268,6 +274,14 @@ impl Elements {
             .ok_or(ElementLoaderError::FileNotFound)?;
 
         Ok(())
+    }
+
+    pub fn signal(&mut self, key: ElementKey, signal: Signal) -> Result<Signal, SignalError> {
+        let mut return_value = Err(SignalError::ElementDoesNotExist);
+        self.loaded.entry(key).and_modify(|element| {
+            return_value = element.send_signal(&signal);
+        });
+        return_value
     }
 }
 

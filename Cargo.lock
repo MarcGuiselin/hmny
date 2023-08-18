@@ -2167,6 +2167,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "homescreen_default"
+version = "0.0.1-dev"
+dependencies = [
+ "hmny_common",
+]
+
+[[package]]
 name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -30,6 +30,7 @@ impl Into<String> for InterfaceVersion {
 pub enum ElementType {
     None,
     Test,
+    HomeScreen,
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
@@ -63,12 +64,22 @@ pub struct ElementMetdata {
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
+pub enum DataType {
+    /// .txt
+    Text(String),
+}
+
+#[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
 pub enum Signal {
+    // Generic Signals
     None,
     AskMetadata,
     Metadata(ElementMetdata),
     Ping { message: String },
     Pong { response: String },
+    // Home Screen Signals
+    AskHomeScreen,
+    HomeScreen(DataType),
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
