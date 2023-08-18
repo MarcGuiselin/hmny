@@ -43,15 +43,13 @@ pub struct RawVectorPtr {
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
 pub struct SignalPacket {
     pub version: InterfaceVersion,
-    pub element_type: ElementType,
     pub payload: Result<RawVectorPtr, ElementError>,
 }
 
 impl SignalPacket {
-    pub fn new(element_type: ElementType, payload: Result<RawVectorPtr, ElementError>) -> Self {
+    pub fn new(payload: Result<RawVectorPtr, ElementError>) -> Self {
         Self {
             version: InterfaceVersion(INTERFACE_VERSION.into()),
-            element_type,
             payload,
         }
     }

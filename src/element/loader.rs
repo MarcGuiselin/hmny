@@ -123,13 +123,10 @@ impl LoadedElement {
                 .map_err(|error| SignalError::EncodeFailed(format!("{}", error)))?;
 
         // Serialize signal packet into wasm memory starting at input_size
-        let input_packet = SignalPacket::new(
-            ElementType::None,
-            Ok(RawVectorPtr {
-                ptr: input_signal_ptr as u64,
-                len: input_signal_size as u64,
-            }),
-        );
+        let input_packet = SignalPacket::new(Ok(RawVectorPtr {
+            ptr: input_signal_ptr as u64,
+            len: input_signal_size as u64,
+        }));
         let input_packet_ptr = input_signal_ptr + input_signal_size;
         let input_packet_slice = mem_slice_mut(memory_slice, input_packet_ptr)?;
         let input_packet_size =

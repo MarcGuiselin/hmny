@@ -53,7 +53,7 @@ pub extern "C" fn signal(input_packet_ptr: u64, input_packet_length: u64) -> u64
     };
 
     // Serialize output object
-    let output = bincode::encode_to_vec(&SignalPacket::new(ELEMENT_TYPE, payload), config).unwrap();
+    let output = bincode::encode_to_vec(&SignalPacket::new(payload), config).unwrap();
 
     // Compact both length and pointer into a single u64
     let len = (output.len() as u64) & 0xFFFFFFFF;
