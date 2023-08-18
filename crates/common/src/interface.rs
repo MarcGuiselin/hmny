@@ -81,6 +81,8 @@ pub enum ElementError {
     EncodeFailed(String),
 }
 
+pub type SignalResult = Result<Signal, ElementError>;
+
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
 pub struct Publisher {
     name: String,

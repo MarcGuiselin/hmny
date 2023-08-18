@@ -116,7 +116,7 @@ pub fn define_element(input: TokenStream) -> TokenStream {
 
         // Inner processor part of the signal function
         #[inline]
-        fn process_signal(signal: &Signal) -> Result<Signal, ElementError> {
+        fn process_signal(signal: &Signal) -> SignalResult {
             match signal {
                 Signal::AskMetadata => Ok(Signal::Metadata(ElementMetdata {
                     name: ELEMENT_NAME.into(),
