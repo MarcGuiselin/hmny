@@ -234,10 +234,13 @@ impl Elements {
         let signal = Signal::Ping {
             message: "Harmony core".into(),
         };
-        let test = element
+        match element
             .send_signal(&signal)
-            .map_err(ElementLoaderError::SignalError)?;
-        println!("Response to ping {:?}", test);
+            .map_err(ElementLoaderError::SignalError)
+        {
+            Ok(response) => println!("Response to ping {:?}", response),
+            Err(error) => println!("Error while pinging {:?}", error),
+        }
 
         // Load into hashmap, replacing any existing element
         let key = Self::get_element_key(&element);
