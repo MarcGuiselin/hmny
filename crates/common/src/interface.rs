@@ -6,7 +6,11 @@ pub const INTERFACE_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub struct InterfaceVersion(String);
 
 impl InterfaceVersion {
-    pub fn new(version: &str) -> Self {
+    pub fn new() -> Self {
+        Self(INTERFACE_VERSION.into())
+    }
+
+    pub fn from(version: &str) -> Self {
         Self(version.into())
     }
 
@@ -54,16 +58,19 @@ impl SignalPacket {
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
+pub struct ElementMetdata {
+    pub name: String,
+    pub version: String,
+    pub element_type: ElementType,
+    pub description: String,
+    pub publisher: Publisher,
+}
+
+#[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
 pub enum Signal {
     None,
-    // AskMetadata,
-    // Metadata {
-    //     name: String,
-    //     version: InterfaceVersion,
-    //     element_type: ElementType,
-    //     description: String,
-    //     publisher: Publisher,
-    // },
+    AskMetadata,
+    Metadata(ElementMetdata),
     Ping { message: String },
     Pong { response: String },
 }

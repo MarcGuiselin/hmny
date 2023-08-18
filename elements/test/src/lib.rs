@@ -3,6 +3,8 @@ use hmny_common::prelude::*;
 pub const ELEMENT_TYPE: ElementType = ElementType::Test;
 pub const ELEMENT_NAME: &str = env!("CARGO_CRATE_NAME");
 pub const ELEMENT_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const ELEMENT_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
+pub const ELEMENT_PUBLISHER: &str = "Harmony";
 
 #[no_mangle]
 pub extern "C" fn signal(input_packet_ptr: u64, input_packet_length: u64) -> u64 {
@@ -66,6 +68,13 @@ pub extern "C" fn signal(input_packet_ptr: u64, input_packet_length: u64) -> u64
 #[inline]
 fn process_signal(signal: &Signal) -> Result<Signal, ElementError> {
     match signal {
+        Signal::AskMetadata => Ok(Signal::Metadata(ElementMetdata {
+            name: ELEMENT_NAME.into(),
+            version: ELEMENT_VERSION.into(),
+            element_type: ELEMENT_TYPE,
+            description: ELEMENT_DESCRIPTION.into(),
+            publisher: Publisher::new(ELEMENT_PUBLISHER, vec![]),
+        })),
         Signal::Ping { message } => {
             let response = format!(
                 r#"Greetings "{}"! I am {}, the element. Pleasure to meet you :)"#,

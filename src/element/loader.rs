@@ -1,5 +1,6 @@
 use bevy::{prelude::*, utils::HashMap};
 use hmny_common::prelude::*;
+use std::fmt;
 use std::fs;
 use std::path::Path;
 
@@ -9,6 +10,13 @@ struct LoadedElement {
     store: wasmer::Store,
     instance: wasmer::Instance,
     signal: wasmer::TypedFunction<(u64, u64), u64>,
+    metadata: Option<ElementMetdata>,
+}
+
+impl fmt::Debug for LoadedElement {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "LoadedElement({:?})", self.get_metadata())
+    }
 }
 
 #[derive(Debug)]
@@ -74,11 +82,22 @@ impl LoadedElement {
             .expect("could not access signal function");
 
         // Load a temporary element
-        let element = LoadedElement {
+        let mut element = LoadedElement {
             store,
             instance,
             signal,
+            metadata: None,
         };
+
+        // Retrieve metadata
+        let metadata = element
+            .send_signal(&Signal::AskMetadata)
+            .map_err(|_| ElementLoaderError::InvalidMetdata)
+            .and_then(|signal| match signal {
+                Signal::Metadata(metadata) => Ok(metadata),
+                _ => Err(ElementLoaderError::InvalidMetdata),
+            })?;
+        element.metadata = Some(metadata);
 
         Ok(element)
     }
@@ -164,6 +183,14 @@ impl LoadedElement {
 
         Ok(output_signal)
     }
+
+    pub fn get_metadata(&self) -> &ElementMetdata {
+        self.metadata.as_ref().unwrap()
+    }
+
+    pub fn get_name(&self) -> &str {
+        self.get_metadata().name.as_ref()
+    }
 }
 
 #[derive(Debug)]
@@ -171,6 +198,7 @@ pub enum ElementLoaderError {
     FileNotFound,
     InvalidWasm(wasmer::CompileError),
     SignalError(SignalError),
+    InvalidMetdata,
 }
 
 #[derive(Resource)]
@@ -187,35 +215,28 @@ impl Elements {
 
     pub fn load_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<(), ElementLoaderError> {
         let file = fs::read(&path).map_err(|_| ElementLoaderError::FileNotFound)?;
-        let name = path
-            .as_ref()
-            .file_stem()
-            .ok_or(ElementLoaderError::FileNotFound)?
-            .to_str()
-            .unwrap();
-
-        self.load(file, name)
+        self.load(file)
     }
 
-    pub fn load(&mut self, bytes: impl AsRef<[u8]>, name: &str) -> Result<(), ElementLoaderError> {
+    pub fn load(&mut self, bytes: impl AsRef<[u8]>) -> Result<(), ElementLoaderError> {
         let mut element = LoadedElement::from_bytes(bytes)?;
+        println!("Successfully loaded element {:?}", element);
 
         // Send a ping signal to test the element
         let signal = Signal::Ping {
             message: "Harmony core".into(),
         };
-        let metadata = element
+        let test = element
             .send_signal(&signal)
             .map_err(ElementLoaderError::SignalError)?;
+        println!("Test metadata response {:?}", test);
 
         // Store element
         // Unload existing element if it exists
-        if let Some(_) = self.loaded.insert(String::from(name), element) {
-            println!("Unloaded element {}", name);
+        let name: String = element.get_name().into();
+        if let Some(unloaded) = self.loaded.insert(name.clone(), element) {
+            println!("Unloaded element {:?}", unloaded);
         }
-
-        println!("Successfully loaded element {}", name);
-        println!("Test metadata response {:?}", metadata);
 
         Ok(())
     }
