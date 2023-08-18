@@ -31,14 +31,20 @@ pub enum ElementType {
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
+pub struct RawVectorPtr {
+    pub ptr: u64,
+    pub len: u64,
+}
+
+#[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
 pub struct SignalPacket {
     pub version: InterfaceVersion,
     pub element_type: ElementType,
-    pub payload: Result<Vec<u8>, ElementError>,
+    pub payload: Result<RawVectorPtr, ElementError>,
 }
 
 impl SignalPacket {
-    pub fn new(element_type: ElementType, payload: Result<Vec<u8>, ElementError>) -> Self {
+    pub fn new(element_type: ElementType, payload: Result<RawVectorPtr, ElementError>) -> Self {
         Self {
             version: InterfaceVersion(INTERFACE_VERSION.into()),
             element_type,

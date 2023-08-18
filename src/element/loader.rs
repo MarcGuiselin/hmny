@@ -13,8 +13,7 @@ struct LoadedElement {
 
 #[derive(Debug)]
 pub enum SignalError {
-    ExportError(wasmer::ExportError),
-    MemoryAccessFailed(wasmer::MemoryAccessError),
+    MemoryTooSmall(usize),
     CallFailed(wasmer::RuntimeError),
     ElementError(ElementError),
     DecodeFailed(String),
@@ -22,70 +21,106 @@ pub enum SignalError {
     UnsupportedInterfaceVersion(InterfaceVersion),
 }
 
+fn mem_slice_mut(slice: &mut [u8], lower: usize) -> Result<&mut [u8], SignalError> {
+    let max = slice.len();
+    if lower > max {
+        Err(SignalError::MemoryTooSmall(lower - max))
+    } else {
+        Ok(&mut slice[lower..max - lower])
+    }
+}
+
+fn mem_slice(slice: &[u8], lower: usize, upper: usize) -> Result<&[u8], SignalError> {
+    assert!(lower <= upper);
+    let max = slice.len();
+    if upper > max {
+        Err(SignalError::MemoryTooSmall(upper - max))
+    } else {
+        Ok(&slice[lower..upper])
+    }
+}
+
 impl LoadedElement {
-    fn send_raw_signal(&mut self, input: &[u8]) -> Result<Vec<u8>, SignalError> {
-        // Writes and creates a 1mb vector of numbers
-        let input_pointer = 0;
-
-        // Copy input data into wasm memory
-        let memory = self
-            .instance
-            .exports
-            .get_memory("memory")
-            .map_err(SignalError::ExportError)?;
-        let memory_view = memory.view(&self.store);
-        memory_view
-            .write(input_pointer, input)
-            .map_err(SignalError::MemoryAccessFailed)?;
-
-        // Calls the wasm function
-        let output = self
-            .signal
-            .call(&mut self.store, input_pointer, input.len() as _)
-            .map_err(SignalError::CallFailed)?;
-
-        // Break out length and pointer from u64
-        let output_length = (output & 0xFFFFFFFF) as usize;
-        let output_ptr = output >> 32;
-
-        // Read output buffer
-        let memory_view = memory.view(&self.store);
-        let mut output = vec![0u8; output_length];
-        memory_view
-            .read(output_ptr, &mut output[..])
-            .map_err(SignalError::MemoryAccessFailed)?;
-
-        Ok(output)
+    fn get_memory<'a>(&'a self) -> &'a wasmer::Memory {
+        self.instance.exports.get_memory("memory").unwrap()
     }
 
-    pub fn send_signal(&mut self, input: &Signal) -> Result<Signal, SignalError> {
+    fn get_memory_view(&mut self) -> wasmer::MemoryView {
+        self.get_memory().view(&self.store)
+    }
+
+    pub fn send_signal(&mut self, input_signal: &Signal) -> Result<Signal, SignalError> {
         let config = bincode::config::standard();
+        let view = self.get_memory_view();
+        let memory_slice = unsafe { view.data_unchecked_mut() };
 
-        let payload = bincode::encode_to_vec(input, config)
-            .map_err(|error| SignalError::EncodeFailed(format!("{}", error)))?;
+        // Serialize input signal into wasm memory starting at 0
+        let input_signal_ptr = 0;
+        let input_signal_slice = mem_slice_mut(memory_slice, input_signal_ptr)?;
+        let input_signal_size =
+            bincode::encode_into_slice(input_signal, input_signal_slice, config)
+                .map_err(|error| SignalError::EncodeFailed(format!("{}", error)))?;
 
-        let packet = SignalPacket::new(ElementType::None, Ok(payload));
-        let raw_packet = bincode::encode_to_vec(packet, config)
-            .map_err(|error| SignalError::EncodeFailed(format!("{}", error)))?;
+        // Serialize signal packet into wasm memory starting at input_size
+        let input_packet = SignalPacket::new(
+            ElementType::None,
+            Ok(RawVectorPtr {
+                ptr: input_signal_ptr as u64,
+                len: input_signal_size as u64,
+            }),
+        );
+        let input_packet_ptr = input_signal_ptr + input_signal_size;
+        let input_packet_slice = mem_slice_mut(memory_slice, input_packet_ptr)?;
+        let input_packet_size =
+            bincode::encode_into_slice(input_packet, input_packet_slice, config)
+                .map_err(|error| SignalError::EncodeFailed(format!("{}", error)))?;
 
-        let raw_output = self.send_raw_signal(&raw_packet[..])?;
+        // Calls the wasm function passing pointer to packet
+        let signal_call_result = self
+            .signal
+            .call(
+                &mut self.store,
+                input_packet_ptr as _,
+                input_packet_size as _,
+            )
+            .map_err(SignalError::CallFailed)?;
 
-        let (output, _) = bincode::decode_from_slice(&raw_output[..], config)
-            .map_err(|error| SignalError::DecodeFailed(format!("{}", error)))?;
-        let SignalPacket {
-            payload, version, ..
-        } = output;
+        // Since self was borrowed to call the signal, we need to get a new view
+        let view = self.get_memory_view();
+        let memory_slice = unsafe { view.data_unchecked_mut() };
 
-        if !version.matches_own() {
-            return Err(SignalError::UnsupportedInterfaceVersion(version));
+        // Retrieve output buffer (slice of memory)
+        let output_packet_slice = {
+            // Break out length and pointer from u64
+            let length = (signal_call_result & 0xFFFFFFFF) as usize;
+            let lower = (signal_call_result >> 32) as usize;
+
+            // Raw output buffer
+            mem_slice(memory_slice, lower, lower + length)?
+        };
+
+        // Decode output into a signal packet
+        let (output_packet, _) =
+            bincode::decode_from_slice::<SignalPacket, _>(output_packet_slice, config)
+                .map_err(|error| SignalError::DecodeFailed(format!("{}", error)))?;
+
+        // Check that signal packet is valid
+        if !output_packet.version.matches_own() {
+            return Err(SignalError::UnsupportedInterfaceVersion(
+                output_packet.version,
+            ));
         }
 
-        let payload = payload.map_err(SignalError::ElementError)?;
-
-        let (output, _) = bincode::decode_from_slice(&payload[..], config)
+        // Retrieve output signal
+        let output_signal_slice = {
+            let RawVectorPtr { ptr, len } =
+                output_packet.payload.map_err(SignalError::ElementError)?;
+            mem_slice(memory_slice, ptr as usize, (ptr + len) as usize)?
+        };
+        let (output_signal, _) = bincode::decode_from_slice(output_signal_slice, config)
             .map_err(|error| SignalError::DecodeFailed(format!("{}", error)))?;
 
-        Ok(output)
+        Ok(output_signal)
     }
 }
 
