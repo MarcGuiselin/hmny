@@ -21,5 +21,5 @@ bevy="0.11.0"
 bevy_framepace = "0.13.3"
 hmny_common = { path = "./crates/common" }
 notify = "6.0.1"
-urn = "0.7.0"
+url = "2.4.0"
 wasmer = { version = "4.1.1" }

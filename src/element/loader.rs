@@ -3,6 +3,7 @@ use hmny_common::prelude::*;
 use std::fmt;
 use std::fs;
 use std::path::Path;
+use url::Url;
 
 pub struct ElementLoaderPlugin;
 
@@ -184,10 +185,6 @@ impl LoadedElement {
     pub fn get_metadata(&self) -> &ElementMetdata {
         self.metadata.as_ref().unwrap()
     }
-
-    pub fn get_name(&self) -> &str {
-        self.get_metadata().name.as_ref()
-    }
 }
 
 #[derive(Debug)]
@@ -198,63 +195,74 @@ pub enum ElementLoaderError {
     InvalidMetdata,
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+enum ElementKey {
+    Other(ElementType, String),
+}
+
 #[derive(Resource)]
 pub struct Elements {
-    loaded: HashMap<String, LoadedElement>,
+    source_map: HashMap<Url, ElementKey>,
+    loaded: HashMap<ElementKey, LoadedElement>,
+}
+
+impl Default for Elements {
+    fn default() -> Self {
+        Self {
+            source_map: HashMap::new(),
+            loaded: HashMap::new(),
+        }
+    }
+}
+
+fn path_to_url<P: AsRef<Path>>(path: P) -> Url {
+    let absolute = fs::canonicalize(path).expect("path could not be canonicalized");
+    Url::from_file_path(absolute).expect("path could not be converted to url")
 }
 
 impl Elements {
-    pub fn new() -> Self {
-        let loaded = HashMap::new();
-
-        Elements { loaded }
-    }
-
     pub fn load_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<(), ElementLoaderError> {
         let file = fs::read(&path).map_err(|_| ElementLoaderError::FileNotFound)?;
-        self.load(file)
+        self.load(file, path_to_url(path))
     }
 
-    pub fn load(&mut self, bytes: impl AsRef<[u8]>) -> Result<(), ElementLoaderError> {
+    pub fn load(&mut self, bytes: impl AsRef<[u8]>, source: Url) -> Result<(), ElementLoaderError> {
         let mut element = LoadedElement::from_bytes(bytes)?;
         println!("Successfully loaded element {:?}", element);
 
-        // Send a ping signal to test the element
+        // Send a test ping signal
         let signal = Signal::Ping {
             message: "Harmony core".into(),
         };
         let test = element
             .send_signal(&signal)
             .map_err(ElementLoaderError::SignalError)?;
-        println!("Test response {:?}", test);
+        println!("Response to ping {:?}", test);
 
-        // Store element
-        // Unload existing element if it exists
-        let name: String = element.get_name().into();
-        if let Some(unloaded) = self.loaded.insert(name.clone(), element) {
-            println!("Unloaded element {:?}", unloaded);
-        }
+        // Load into hashmap, replacing any existing element
+        let key = Self::get_element_key(&element);
+        self.loaded.insert(key.clone(), element);
+        self.source_map.insert(source, key);
 
         Ok(())
     }
 
-    pub fn unload_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<(), ElementLoaderError> {
-        let name = path
-            .as_ref()
-            .file_stem()
-            .ok_or(ElementLoaderError::FileNotFound)?
-            .to_str()
-            .unwrap();
-
-        self.unload(name)
+    fn get_element_key(element: &LoadedElement) -> ElementKey {
+        let ElementMetdata {
+            element_type, name, ..
+        } = element.get_metadata();
+        ElementKey::Other(element_type.clone(), name.into())
     }
 
-    pub fn unload(&mut self, name: &str) -> Result<(), ElementLoaderError> {
-        self.loaded
-            .remove(name)
-            .ok_or(ElementLoaderError::FileNotFound)?;
+    pub fn unload_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<(), ElementLoaderError> {
+        self.unload(&path_to_url(path))
+    }
 
-        println!("Successfully unloaded element {}", name);
+    pub fn unload(&mut self, source: &Url) -> Result<(), ElementLoaderError> {
+        self.source_map
+            .remove(source)
+            .and_then(|key| self.loaded.remove(&key))
+            .ok_or(ElementLoaderError::FileNotFound)?;
 
         Ok(())
     }
@@ -262,6 +270,6 @@ impl Elements {
 
 impl Plugin for ElementLoaderPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(Elements::new());
+        app.init_resource::<Elements>();
     }
 }

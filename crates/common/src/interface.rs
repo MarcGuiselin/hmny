@@ -26,12 +26,10 @@ impl Into<String> for InterfaceVersion {
     }
 }
 
-#[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
+#[derive(Clone, Decode, Encode, PartialEq, Debug, Eq, Hash)]
 pub enum ElementType {
     None,
     Test,
-    // These can be renamed in the future
-    Unknown,
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]

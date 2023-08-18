@@ -2146,7 +2146,7 @@ dependencies = [
  "bevy_framepace",
  "hmny_common",
  "notify",
- "urn",
+ "url",
  "wasmer",
 ]
 
@@ -3766,15 +3766,6 @@ dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
-]
-
-[[package]]
-name = "urn"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88dcfb3ddf58a741e39d7206b8fb08d2856c0db0e22d41b226fbc34889d2158c"
-dependencies = [
- "serde",
 ]
 
 [[package]]
