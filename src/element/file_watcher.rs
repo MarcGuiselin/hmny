@@ -50,9 +50,9 @@ impl Default for ElementFileWatcher {
     fn default() -> Self {
         let mut inner = ElementFileWatcherInner::new();
 
-        inner
-            .watch(ELEMENTS_LOAD_DIR)
-            .expect("Failed to watch path.");
+        let path = Path::new(ELEMENTS_LOAD_DIR);
+        let _ = fs::create_dir_all(path);
+        inner.watch(path).expect("Failed to watch path.");
 
         let inner = Arc::new(inner);
         Self { inner }
