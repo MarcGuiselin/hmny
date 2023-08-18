@@ -226,7 +226,7 @@ impl Elements {
         let test = element
             .send_signal(&signal)
             .map_err(ElementLoaderError::SignalError)?;
-        println!("Test metadata response {:?}", test);
+        println!("Test response {:?}", test);
 
         // Store element
         // Unload existing element if it exists
