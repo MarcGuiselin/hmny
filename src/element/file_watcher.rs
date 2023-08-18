@@ -67,7 +67,10 @@ fn elements_load_from_dir_system(mut elements: ResMut<Elements>) {
 
         match path.extension() {
             Some(ext) if ext == "wasm" => {
-                elements.load_from_path(path).unwrap();
+                if let Err(res) = elements.load_from_path(path.clone()) {
+                    println!("Error while attempting to load plugin {:?}", path);
+                    println!("    {:?}", res);
+                }
             }
             _ => {}
         }
