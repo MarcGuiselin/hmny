@@ -2155,6 +2155,7 @@ name = "hmny_common"
 version = "0.0.1-dev"
 dependencies = [
  "bincode",
+ "hmny_macros",
 ]
 
 [[package]]
@@ -3550,7 +3551,6 @@ name = "test_element"
 version = "0.0.1-dev"
 dependencies = [
  "hmny_common",
- "hmny_macros",
 ]
 
 [[package]]

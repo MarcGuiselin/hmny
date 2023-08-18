@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 bincode = { git = "https://github.com/bincode-org/bincode.git", rev = "aada4bb4cb457677a4b8e47572ae7ca8dd44927c"}
+hmny_macros = { path = "../macros" }

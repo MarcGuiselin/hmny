@@ -14,4 +14,3 @@ codegen-units = 1
 
 [dependencies]
 hmny_common = { path = "../../crates/common" }
-hmny_macros = { path = "../../crates/macros" }
