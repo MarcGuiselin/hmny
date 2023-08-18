@@ -41,8 +41,50 @@ fn mem_slice(slice: &[u8], lower: usize, upper: usize) -> Result<&[u8], SignalEr
 }
 
 impl LoadedElement {
+    const MEMORY: &str = "memory";
+
+    pub fn from_bytes(bytes: impl AsRef<[u8]>) -> Result<Self, ElementLoaderError> {
+        // Create a Store.
+        let mut store = wasmer::Store::default();
+
+        // We then use our store and Wasm bytes to compile a `Module`.
+        // A `Module` is a compiled WebAssembly module that isn't ready to execute yet.
+        let module = wasmer::Module::new(&store, bytes).map_err(ElementLoaderError::InvalidWasm)?;
+
+        // Initiate shared memory pool
+        let memory = wasmer::Memory::new(&mut store, wasmer::MemoryType::new(1, None, false))
+            .expect("wasm memory allocation failed");
+        let import_object = wasmer::imports! {
+            "env" => {
+                Self::MEMORY => memory,
+            },
+        };
+
+        // We then use the `Module` and the import object to create an `Instance`.
+        //
+        // An `Instance` is a compiled WebAssembly module that has been set up
+        // and is ready to execute.
+        let instance = wasmer::Instance::new(&mut store, &module, &import_object)
+            .expect("wasm instantiation failed");
+
+        // Init typed functions
+        let signal = instance
+            .exports
+            .get_typed_function(&store, "signal")
+            .expect("could not access signal function");
+
+        // Load a temporary element
+        let element = LoadedElement {
+            store,
+            instance,
+            signal,
+        };
+
+        Ok(element)
+    }
+
     fn get_memory<'a>(&'a self) -> &'a wasmer::Memory {
-        self.instance.exports.get_memory("memory").unwrap()
+        self.instance.exports.get_memory(Self::MEMORY).unwrap()
     }
 
     fn get_memory_view(&mut self) -> wasmer::MemoryView {
@@ -156,43 +198,9 @@ impl Elements {
     }
 
     pub fn load(&mut self, bytes: impl AsRef<[u8]>, name: &str) -> Result<(), ElementLoaderError> {
-        // Create a Store.
-        let mut store = wasmer::Store::default();
+        let mut element = LoadedElement::from_bytes(bytes)?;
 
-        // We then use our store and Wasm bytes to compile a `Module`.
-        // A `Module` is a compiled WebAssembly module that isn't ready to execute yet.
-        let module = wasmer::Module::new(&store, bytes).map_err(ElementLoaderError::InvalidWasm)?;
-
-        // Initiate shared memory pool
-        let memory = wasmer::Memory::new(&mut store, wasmer::MemoryType::new(1, None, false))
-            .expect("wasm memory allocation failed");
-        let import_object = wasmer::imports! {
-            "env" => {
-                "memory" => memory,
-            },
-        };
-
-        // We then use the `Module` and the import object to create an `Instance`.
-        //
-        // An `Instance` is a compiled WebAssembly module that has been set up
-        // and is ready to execute.
-        let instance = wasmer::Instance::new(&mut store, &module, &import_object)
-            .expect("wasm instantiation failed");
-
-        // Init typed functions
-        let signal = instance
-            .exports
-            .get_typed_function(&store, "signal")
-            .expect("could not access signal function");
-
-        // Build LoadedElement
-        let mut element = LoadedElement {
-            store,
-            instance,
-            signal,
-        };
-
-        // Load metadata
+        // Send a ping signal to test the element
         let signal = Signal::Ping {
             message: "Harmony core".into(),
         };
