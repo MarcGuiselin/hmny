@@ -2158,6 +2158,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "hmny_macros"
+version = "0.0.1-dev"
+dependencies = [
+ "quote",
+ "syn 2.0.28",
+]
+
+[[package]]
 name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3542,6 +3550,7 @@ name = "test_element"
 version = "0.0.1-dev"
 dependencies = [
  "hmny_common",
+ "hmny_macros",
 ]
 
 [[package]]
