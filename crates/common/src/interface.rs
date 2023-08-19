@@ -31,6 +31,7 @@ pub enum ElementType {
     None,
     Test,
     HomeScreen,
+    MimeType(String),
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
@@ -74,11 +75,24 @@ pub enum Signal {
     None,
     AskMetadata,
     Metadata(ElementMetdata),
-    Ping { message: String },
-    Pong { response: String },
+    Ping {
+        message: String,
+    },
+    Pong {
+        response: String,
+    },
     // Home Screen Signals
     AskHomeScreen,
-    HomeScreen { mime_type: String, data: DataType },
+    HomeScreen {
+        mime_type: String,
+        data: DataType,
+    },
+    // Mime Type Signals
+    AskDimension(DataType),
+    Dimension {
+        // ron-serialized bevy scene
+        serialized_scene: String,
+    },
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]

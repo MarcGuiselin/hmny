@@ -283,6 +283,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
+name = "base64"
+version = "0.21.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "604178f6c5c21f02dc555784810edfb88d34ac2c73b2eae109655649ee73ce3d"
+
+[[package]]
 name = "bevy"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -399,6 +405,7 @@ dependencies = [
  "bevy_tasks",
  "bevy_utils",
  "bytemuck",
+ "serde",
 ]
 
 [[package]]
@@ -544,7 +551,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f09b699698a2f5843ef63064010a5e7783403f99a697a04f41a2f8141cb4245d"
 dependencies = [
  "anyhow",
- "base64",
+ "base64 0.13.1",
  "bevy_animation",
  "bevy_app",
  "bevy_asset",
@@ -594,6 +601,7 @@ dependencies = [
  "bevy_math",
  "bevy_reflect",
  "bevy_utils",
+ "serde",
  "thiserror",
 ]
 
@@ -904,6 +912,7 @@ dependencies = [
  "bevy_reflect",
  "bevy_utils",
  "crossbeam-channel",
+ "serde",
  "thiserror",
 ]
 
@@ -918,6 +927,7 @@ dependencies = [
  "bevy_hierarchy",
  "bevy_math",
  "bevy_reflect",
+ "serde",
 ]
 
 [[package]]
@@ -991,6 +1001,7 @@ dependencies = [
  "bevy_reflect",
  "bevy_utils",
  "raw-window-handle",
+ "serde",
 ]
 
 [[package]]
@@ -1081,6 +1092,9 @@ name = "bitflags"
 version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "630be753d4e58660abd17930c71b647fe46c27ea6b63cc59e1e3851406972e42"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "bitvec"
@@ -2146,6 +2160,7 @@ dependencies = [
  "bevy_framepace",
  "hmny_common",
  "notify",
+ "ron",
  "url",
  "wasmer",
 ]
@@ -2531,6 +2546,14 @@ dependencies = [
  "foreign-types",
  "log",
  "objc",
+]
+
+[[package]]
+name = "mimetype_txt"
+version = "0.0.1-dev"
+dependencies = [
+ "bevy",
+ "hmny_common",
 ]
 
 [[package]]
@@ -3276,13 +3299,14 @@ dependencies = [
 
 [[package]]
 name = "ron"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "300a51053b1cb55c80b7a9fde4120726ddf25ca241a1cbb926626f62fb136bff"
+checksum = "b91f7eff05f748767f183df4320a63d6936e9c6107d97c9e6bdd9784f4289c94"
 dependencies = [
- "base64",
- "bitflags 1.3.2",
+ "base64 0.21.2",
+ "bitflags 2.3.3",
  "serde",
+ "serde_derive",
 ]
 
 [[package]]

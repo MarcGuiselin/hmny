@@ -199,6 +199,7 @@ pub enum ElementLoaderError {
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum ElementKey {
     HomeScreen,
+    MimeType(String),
     Other(ElementType, String),
 }
 
@@ -259,6 +260,8 @@ impl Elements {
         match element_type {
             // Only one homescreen is loaded at a time
             ElementType::HomeScreen => ElementKey::HomeScreen,
+            // Mimetypes have sole control over their own mime type
+            ElementType::MimeType(mime_type) => ElementKey::MimeType(mime_type.clone()),
             _ => ElementKey::Other(element_type.clone(), name.into()),
         }
     }

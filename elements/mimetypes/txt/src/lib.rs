@@ -1,18 +1,17 @@
-use crate::element::{ElementKey, Elements};
 use bevy::prelude::*;
 use hmny_common::prelude::*;
 
-pub struct HistoryPlugin;
-
-impl Plugin for HistoryPlugin {
-    fn build(&self, app: &mut App) {
-        // Enable this to test the scene serialization
-        //app.add_systems(PreStartup, test_save_scene_system);
-        app.add_systems(Startup, setup);
+// Macro that defines metadata and signal matcher
+define_element! {
+    publisher: Publisher::new("Harmony", vec![]),
+    element_type: ElementType::MimeType("txt".into()),
+    signals: match signal {
+        Signal::AskDimension(data) => dimension(data),
     }
 }
 
-fn test_save_scene_system() {
+// Receive data from application
+fn dimension(data: &DataType) -> SignalResult {
     // Initialize bevy world
     let mut world = World::new();
     let registry = AppTypeRegistry::default();
@@ -42,20 +41,23 @@ fn test_save_scene_system() {
     let scene = DynamicScene::from_world(&world);
     let serialized_scene = scene.serialize_ron(type_registry).unwrap();
 
-    // Showing the scene in the console
-    info!("{}", serialized_scene);
+    // Return to application
+    Ok(Signal::Dimension { serialized_scene })
 }
 
-fn setup(mut elements: ResMut<Elements>) {
-    match elements.signal(ElementKey::HomeScreen, Signal::AskHomeScreen) {
-        Ok(Signal::HomeScreen { mime_type, data }) => {
-            println!(
-                r#"Load home screen with mimetype: "{}" data: "{:?}""#,
-                mime_type, data
-            );
-        }
-        other => {
-            println!("Could not load home screen data: {:?}", other);
-        }
-    }
-}
+// fn dimension(data: &DataType) -> SignalResult {
+//     let serialized_scene = format!(
+//         r###"
+// #version 330
+//
+// in vec4 v_color;
+// out vec4 color;
+//
+// void main() {{
+//     color = v_color;
+// }};
+// "###
+//     );
+//
+//     Ok(Signal::Dimension { serialized_scene })
+// }
