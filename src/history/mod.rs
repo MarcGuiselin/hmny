@@ -12,8 +12,11 @@ impl Plugin for HistoryPlugin {
 
 fn setup(mut elements: ResMut<Elements>) {
     match elements.signal(ElementKey::HomeScreen, Signal::AskHomeScreen) {
-        Ok(Signal::HomeScreen(data)) => {
-            println!("Load home screen with data: {:?}", data);
+        Ok(Signal::HomeScreen { mime_type, data }) => {
+            println!(
+                r#"Load home screen with mimetype: "{}" data: "{:?}""#,
+                mime_type, data
+            );
         }
         other => {
             println!("Could not load home screen data: {:?}", other);

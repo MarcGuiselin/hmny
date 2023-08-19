@@ -9,7 +9,8 @@ define_element! {
 }
 
 fn home_screen() -> SignalResult {
-    Ok(Signal::HomeScreen(DataType::Text(
-        include_str!("homescreen.md").into(),
-    )))
+    Ok(Signal::HomeScreen {
+        mime_type: "txt".into(),
+        data: DataType::String(include_str!("homescreen.md").into()),
+    })
 }

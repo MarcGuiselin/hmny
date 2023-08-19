@@ -65,8 +65,7 @@ pub struct ElementMetdata {
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
 pub enum DataType {
-    /// .txt
-    Text(String),
+    String(String),
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
@@ -79,7 +78,7 @@ pub enum Signal {
     Pong { response: String },
     // Home Screen Signals
     AskHomeScreen,
-    HomeScreen(DataType),
+    HomeScreen { mime_type: String, data: DataType },
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
