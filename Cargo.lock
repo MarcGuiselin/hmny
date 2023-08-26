@@ -2163,6 +2163,7 @@ dependencies = [
 name = "hmny_macros"
 version = "0.0.1-dev"
 dependencies = [
+ "proc-macro2",
  "quote",
  "syn 2.0.28",
 ]
