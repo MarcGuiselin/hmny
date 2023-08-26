@@ -12,5 +12,3 @@ pub trait HarmonySignal: Sized + Decode + Encode {
 mod homescreen;
 #[cfg(feature = "homescreen")]
 pub use homescreen::*;
-#[cfg(all(feature = "homescreen", not(feature = "default")))]
-pub use homescreen::{HomescreenQuery as SignalQuery, HomescreenResponse as SignalResponse};
