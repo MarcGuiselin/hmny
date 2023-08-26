@@ -81,7 +81,7 @@ impl LoadedElement {
         let signal = instance
             .exports
             .get_typed_function(&store, "signal")
-            .expect("could not access signal function");
+            .map_err(ElementLoaderError::MissingExport)?;
 
         // Load a temporary element
         let mut element = LoadedElement {
@@ -193,6 +193,7 @@ pub enum ElementLoaderError {
     FileNotFound,
     InvalidWasm(wasmer::CompileError),
     SignalError(SignalError),
+    MissingSignal,
     InvalidMetdata,
 }
 
