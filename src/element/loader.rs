@@ -127,25 +127,14 @@ impl LoadedElement {
             bincode::encode_into_slice(input_signal, input_signal_slice, config)
                 .map_err(|error| SignalError::EncodeFailed(format!("{}", error)))?;
 
-        // Serialize signal packet into wasm memory starting at input_size
-        let input_packet = SignalPacket::new(Ok(RawVectorPtr {
-            ptr: input_signal_ptr as u64,
-            len: input_signal_size as u64,
-        }));
-        let input_packet_ptr = input_signal_ptr + input_signal_size;
-        let input_packet_slice = mem_slice_mut(memory_slice, input_packet_ptr)?;
-        let input_packet_size =
-            bincode::encode_into_slice(input_packet, input_packet_slice, config)
-                .map_err(|error| SignalError::EncodeFailed(format!("{}", error)))?;
-
-        // Calls the wasm function passing pointer to packet
+        // Calls the wasm function passing pointer to signal
         let signal_call_result = self
             .signal
             .call(
                 &mut self.store,
                 Signal::QUERY_ID,
-                input_packet_ptr as _,
-                input_packet_size as _,
+                input_signal_ptr as _,
+                input_signal_size as _,
             )
             .map_err(SignalError::CallFailed)?;
 
@@ -154,7 +143,7 @@ impl LoadedElement {
         let memory_slice = unsafe { view.data_unchecked_mut() };
 
         // Retrieve output buffer (slice of memory)
-        let output_packet_slice = {
+        let output_signal_slice = {
             // Break out length and pointer from u64
             let length = (signal_call_result & 0xFFFFFFFF) as usize;
             let lower = (signal_call_result >> 32) as usize;
@@ -163,28 +152,14 @@ impl LoadedElement {
             mem_slice(memory_slice, lower, lower + length)?
         };
 
-        // Decode output into a signal packet
-        let (output_packet, _) =
-            bincode::decode_from_slice::<SignalPacket, _>(output_packet_slice, config)
-                .map_err(|error| SignalError::DecodeFailed(format!("{}", error)))?;
+        // Retrieve output signal (always a Result<ResponseType, ElementError>)
+        let (output_signal, _) = bincode::decode_from_slice::<
+            Result<<Signal as HarmonySignal>::ResponseType, ElementError>,
+            _,
+        >(output_signal_slice, config)
+        .map_err(|error| SignalError::DecodeFailed(format!("{}", error)))?;
 
-        // Check that signal packet is valid
-        if !output_packet.version.matches_own() {
-            return Err(SignalError::UnsupportedInterfaceVersion(
-                output_packet.version,
-            ));
-        }
-
-        // Retrieve output signal
-        let output_signal_slice = {
-            let RawVectorPtr { ptr, len } =
-                output_packet.payload.map_err(SignalError::ElementError)?;
-            mem_slice(memory_slice, ptr as usize, (ptr + len) as usize)?
-        };
-        let (output_signal, _) = bincode::decode_from_slice(output_signal_slice, config)
-            .map_err(|error| SignalError::DecodeFailed(format!("{}", error)))?;
-
-        Ok(output_signal)
+        output_signal.map_err(SignalError::ElementError)
     }
 
     pub fn get_metadata(&self) -> &ElementMetdata {
