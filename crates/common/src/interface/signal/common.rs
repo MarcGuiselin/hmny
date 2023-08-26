@@ -1,17 +1,17 @@
 use super::*;
 
-#[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
+#[derive(Clone, Decode, Encode, PartialEq, Debug)]
 pub enum DataType {
     String(String),
 }
 
-#[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
+#[derive(Clone, Decode, Encode, PartialEq, Debug)]
 pub enum CommonQuery {
     AskMetadata,
     Ping { message: String },
 }
 
-#[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
+#[derive(Clone, Decode, Encode, PartialEq, Debug)]
 pub enum CommonResponse {
     Metadata(ElementMetdata),
     Pong { response: String },
