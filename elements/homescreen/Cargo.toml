@@ -7,4 +7,4 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-hmny_common = { path = "../../crates/common" }
+hmny_common = { path = "../../crates/common", default-features = false, features = ["homescreen"] }

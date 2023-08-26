@@ -1,5 +1,8 @@
 use bincode::{Decode, Encode};
 
+mod signal;
+pub use signal::*;
+
 pub const INTERFACE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
@@ -31,12 +34,19 @@ pub enum ElementType {
     None,
     Test,
     HomeScreen,
+    MimeType(String),
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
 pub struct RawVectorPtr {
     pub ptr: u64,
     pub len: u64,
+}
+
+impl RawVectorPtr {
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe { std::slice::from_raw_parts(self.ptr as *const u8, self.len as usize) }
+    }
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
@@ -64,32 +74,13 @@ pub struct ElementMetdata {
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
-pub enum DataType {
-    String(String),
-}
-
-#[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
-pub enum Signal {
-    // Generic Signals
-    None,
-    AskMetadata,
-    Metadata(ElementMetdata),
-    Ping { message: String },
-    Pong { response: String },
-    // Home Screen Signals
-    AskHomeScreen,
-    HomeScreen { mime_type: String, data: DataType },
-}
-
-#[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
 pub enum ElementError {
     UnsupportedInterfaceVersion(InterfaceVersion),
     UnsupportedSignal,
     DecodeFailed(String),
     EncodeFailed(String),
+    UnsupportedInterface(u64),
 }
-
-pub type SignalResult = Result<Signal, ElementError>;
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
 pub struct Publisher {

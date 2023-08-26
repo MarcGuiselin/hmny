@@ -11,8 +11,8 @@ impl Plugin for HistoryPlugin {
 }
 
 fn setup(mut elements: ResMut<Elements>) {
-    match elements.signal(ElementKey::HomeScreen, Signal::AskHomeScreen) {
-        Ok(Signal::HomeScreen { mime_type, data }) => {
+    match elements.signal(ElementKey::HomeScreen, HomescreenQuery::AskHomeScreen) {
+        Ok(HomescreenResponse::HomeScreen { mime_type, data }) => {
             println!(
                 r#"Load home screen with mimetype: "{}" data: "{:?}""#,
                 mime_type, data

@@ -10,7 +10,7 @@ pub struct ElementLoaderPlugin;
 struct LoadedElement {
     store: wasmer::Store,
     instance: wasmer::Instance,
-    signal: wasmer::TypedFunction<(u64, u64), u64>,
+    signal: wasmer::TypedFunction<(u64, u64, u64), u64>,
     metadata: Option<ElementMetdata>,
 }
 
@@ -93,10 +93,10 @@ impl LoadedElement {
 
         // Retrieve metadata
         let metadata = element
-            .send_signal(&Signal::AskMetadata)
+            .send_signal(CommonQuery::AskMetadata)
             .map_err(|_| ElementLoaderError::InvalidMetdata)
             .and_then(|signal| match signal {
-                Signal::Metadata(metadata) => Ok(metadata),
+                CommonResponse::Metadata(metadata) => Ok(metadata),
                 _ => Err(ElementLoaderError::InvalidMetdata),
             })?;
         element.metadata = Some(metadata);
@@ -112,7 +112,10 @@ impl LoadedElement {
         self.get_memory().view(&self.store)
     }
 
-    pub fn send_signal(&mut self, input_signal: &Signal) -> Result<Signal, SignalError> {
+    pub fn send_signal<Signal: HarmonySignal>(
+        &mut self,
+        input_signal: Signal,
+    ) -> Result<Signal::ResponseType, SignalError> {
         let config = bincode::config::standard();
         let view = self.get_memory_view();
         let memory_slice = unsafe { view.data_unchecked_mut() };
@@ -140,6 +143,7 @@ impl LoadedElement {
             .signal
             .call(
                 &mut self.store,
+                Signal::QUERY_ID,
                 input_packet_ptr as _,
                 input_packet_size as _,
             )
@@ -193,7 +197,7 @@ pub enum ElementLoaderError {
     FileNotFound,
     InvalidWasm(wasmer::CompileError),
     SignalError(SignalError),
-    MissingSignal,
+    MissingExport(wasmer::ExportError),
     InvalidMetdata,
 }
 
@@ -234,11 +238,11 @@ impl Elements {
         println!("Successfully loaded element {:?}", element);
 
         // Send a test ping signal
-        let signal = Signal::Ping {
+        let signal = CommonQuery::Ping {
             message: "Harmony core".into(),
         };
         match element
-            .send_signal(&signal)
+            .send_signal(signal)
             .map_err(ElementLoaderError::SignalError)
         {
             Ok(response) => println!("Response to ping {:?}", response),
@@ -277,10 +281,14 @@ impl Elements {
         Ok(())
     }
 
-    pub fn signal(&mut self, key: ElementKey, signal: Signal) -> Result<Signal, SignalError> {
+    pub fn signal<Signal: HarmonySignal>(
+        &mut self,
+        key: ElementKey,
+        signal: Signal,
+    ) -> Result<Signal::ResponseType, SignalError> {
         let mut return_value = Err(SignalError::ElementDoesNotExist);
         self.loaded.entry(key).and_modify(|element| {
-            return_value = element.send_signal(&signal);
+            return_value = element.send_signal(signal);
         });
         return_value
     }
