@@ -56,11 +56,11 @@ pub struct ElementMetdata {
     pub element_type: ElementType,
     pub description: String,
     pub publisher: Publisher,
+    pub interface_version: InterfaceVersion,
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
 pub enum ElementError {
-    UnsupportedInterfaceVersion(InterfaceVersion),
     UnsupportedSignal,
     DecodeFailed(String),
     EncodeFailed(String),

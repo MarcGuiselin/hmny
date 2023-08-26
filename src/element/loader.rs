@@ -27,7 +27,6 @@ pub enum SignalError {
     ElementError(ElementError),
     DecodeFailed(String),
     EncodeFailed(String),
-    UnsupportedInterfaceVersion(InterfaceVersion),
     ElementDoesNotExist,
 }
 
@@ -99,8 +98,15 @@ impl LoadedElement {
                 CommonResponse::Metadata(metadata) => Ok(metadata),
                 _ => Err(ElementLoaderError::InvalidMetdata),
             })?;
-        element.metadata = Some(metadata);
 
+        // Check that element interface version matches own (mismatching versions might lead to deserialization/serialization failure later)
+        if !metadata.interface_version.matches_own() {
+            return Err(ElementLoaderError::UnsupportedInterfaceVersion(
+                metadata.interface_version,
+            ));
+        }
+
+        element.metadata = Some(metadata);
         Ok(element)
     }
 
@@ -174,6 +180,7 @@ pub enum ElementLoaderError {
     SignalError(SignalError),
     MissingExport(wasmer::ExportError),
     InvalidMetdata,
+    UnsupportedInterfaceVersion(InterfaceVersion),
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]

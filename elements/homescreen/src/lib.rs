@@ -68,6 +68,7 @@ impl HomescreenElement {
             element_type: ElementType::HomeScreen,
             description: ELEMENT_DESCRIPTION.into(),
             publisher: Publisher::new("Harmony", vec![]),
+            interface_version: InterfaceVersion::new(),
         })
     }
 }
