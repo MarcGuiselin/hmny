@@ -1,5 +1,6 @@
 use hmny_common::prelude::*;
-use markdown::{mdast::Node, to_mdast};
+use markdown::mdast::Node;
+mod mdast;
 
 #[define_element{
     publisher: Publisher::new("Harmony", vec![]),
@@ -15,10 +16,6 @@ impl MimetypeInterface for HomescreenElement {
     }
 }
 
-fn children_to_string(children: &[Node]) -> String {
-    children.iter().map(ToString::to_string).collect()
-}
-
 fn parse(data: DataType) -> MimetypeResult {
     // Markdown must be string
     let data = match data {
@@ -26,37 +23,14 @@ fn parse(data: DataType) -> MimetypeResult {
         // _ => return Err("Invalid data type".into()),
     };
 
-    // Parse markdown
-    let mdast = to_mdast(&data, &markdown::ParseOptions::default()).map_err(|e| e.into())?;
-
-    // Obtain title from markdown
-    let mut title = String::from("None");
-    match mdast {
-        Node::Root(root) => {
-            for child in root.children {
-                match child {
-                    Node::Heading(heading) if heading.depth == 1 => {
-                        title = children_to_string(&heading.children[..]);
-                    }
-                    _ => {}
-                }
-            }
-        }
-        _ => {}
-    }
+    // Parse markdown and produce dimension
+    let dimension = markdown::to_mdast(&data, &markdown::ParseOptions::default())
+        .and_then(|mdast| match mdast {
+            Node::Root(root) => mdast::root_to_dimension(root),
+            _ => Err("Expected root of markdown to be root".into()),
+        })
+        .map_err(|e| e.into())?;
 
     // Convert mdast to dimension
-    Ok(MimetypeResponse::Dimension(Dimension {
-        title,
-        children: vec![Entity {
-            label: None,
-            components: vec![
-                Component::Text(Text {
-                    text: "Test Text!".into(),
-                    ..Default::default()
-                }),
-                Component::Location2D(Location2D::default()),
-            ],
-        }],
-    }))
+    Ok(MimetypeResponse::Dimension(dimension))
 }
