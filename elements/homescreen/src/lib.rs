@@ -10,8 +10,8 @@ impl HomescreenInterface for HomescreenElement {
     fn homescreen_query(query: HomescreenQuery) -> HomescreenResult {
         match query {
             HomescreenQuery::AskHomeScreen => Ok(HomescreenResponse::HomeScreen {
-                mime_type: "Test".into(),
-                data: DataType::String("Test".into()),
+                mime_type: "markdown".into(),
+                data: DataType::String(include_str!("../homescreen.md").into()),
             }),
         }
     }

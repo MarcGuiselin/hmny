@@ -12,3 +12,8 @@ pub trait HarmonySignal: Sized + Decode + Encode {
 mod homescreen;
 #[cfg(feature = "homescreen")]
 pub use homescreen::*;
+
+#[cfg(feature = "mimetype")]
+mod mimetype;
+#[cfg(feature = "mimetype")]
+pub use mimetype::*;

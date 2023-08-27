@@ -1,5 +1,8 @@
 use bincode::{Decode, Encode};
 
+mod dom;
+pub use dom::*;
+
 mod signal;
 pub use signal::*;
 
@@ -34,7 +37,7 @@ pub enum ElementType {
     None,
     Test,
     HomeScreen,
-    MimeType(String),
+    Mimetype(String),
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
@@ -65,6 +68,19 @@ pub enum ElementError {
     DecodeFailed(String),
     EncodeFailed(String),
     UnsupportedInterface(u64),
+    Other(String),
+}
+
+impl Into<ElementError> for String {
+    fn into(self) -> ElementError {
+        ElementError::Other(self)
+    }
+}
+
+impl Into<ElementError> for &str {
+    fn into(self) -> ElementError {
+        ElementError::Other(self.into())
+    }
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]

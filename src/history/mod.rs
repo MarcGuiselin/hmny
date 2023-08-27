@@ -17,6 +17,18 @@ fn setup(mut elements: ResMut<Elements>) {
                 r#"Load home screen with mimetype: "{}" data: "{:?}""#,
                 mime_type, data
             );
+
+            match elements.signal(
+                ElementKey::Mimetype(mime_type),
+                MimetypeQuery::AskParse { data },
+            ) {
+                Ok(MimetypeResponse::Dimension(dimension)) => {
+                    println!(r#"Load dimension: "{:?}""#, dimension);
+                }
+                other => {
+                    println!("Could not load dimension: {:?}", other);
+                }
+            }
         }
         other => {
             println!("Could not load home screen data: {:?}", other);
