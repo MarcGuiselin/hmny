@@ -20,6 +20,9 @@ impl Default for Cursor {
 #[derive(Component)]
 struct MainCamera;
 
+#[derive(Component)]
+struct FollowMouse;
+
 pub struct DimensionPlugin;
 
 impl Plugin for DimensionPlugin {
@@ -28,7 +31,7 @@ impl Plugin for DimensionPlugin {
             .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.9)))
             .add_systems(Startup, setup)
             .add_systems(PreUpdate, cursor_system)
-            .add_systems(Update, (sprite_update, print_char_event_system));
+            .add_systems(Update, (follow_mouse_update, print_char_event_system));
     }
 }
 
@@ -36,20 +39,23 @@ fn setup(mut commands: Commands) {
     commands.spawn((Camera2dBundle::default(), MainCamera));
 
     // Rectangle
-    commands.spawn(SpriteBundle {
-        sprite: Sprite {
-            color: Color::rgb(0.25, 0.25, 0.75),
-            custom_size: Some(Vec2::new(50.0, 100.0)),
+    commands.spawn((
+        FollowMouse,
+        SpriteBundle {
+            sprite: Sprite {
+                color: Color::rgb(0.25, 0.25, 0.75),
+                custom_size: Some(Vec2::new(50.0, 100.0)),
+                ..default()
+            },
+            visibility: Visibility::Hidden,
             ..default()
         },
-        visibility: Visibility::Hidden,
-        ..default()
-    });
+    ));
 }
 
-fn sprite_update(
+fn follow_mouse_update(
     cursor: Res<Cursor>,
-    mut sprites: Query<(&mut Transform, &mut Visibility), With<Sprite>>,
+    mut sprites: Query<(&mut Transform, &mut Visibility), With<FollowMouse>>,
 ) {
     let Cursor { visible, x, y } = *cursor;
     for (mut transform, mut visibility) in sprites.iter_mut() {
