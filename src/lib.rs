@@ -3,6 +3,7 @@ use bevy_framepace::FramepacePlugin;
 
 mod dimension;
 mod history;
+mod text;
 mod wrap;
 
 pub struct HarmonyPlugin;
@@ -25,6 +26,7 @@ impl Plugin for HarmonyPlugin {
             // Harmony Core Plugins
             dimension::DimensionPlugin,
             wrap::WrapPlugin,
+            text::TextPlugin,
             history::HistoryPlugin,
         ));
     }
