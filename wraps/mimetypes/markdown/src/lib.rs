@@ -2,13 +2,13 @@ use hmny_common::prelude::*;
 use markdown::mdast::Node;
 mod mdast;
 
-#[define_element{
+#[define_wrap{
     publisher: Publisher::new("Harmony", vec![]),
-    element_type: ElementType::Mimetype("markdown".into()),
+    wrap_type: WrapType::Mimetype("markdown".into()),
 }]
-struct HomescreenElement(CommonQuery, MimetypeQuery);
+struct HomescreenWrap(CommonQuery, MimetypeQuery);
 
-impl MimetypeInterface for HomescreenElement {
+impl MimetypeInterface for HomescreenWrap {
     fn mimetype_query(query: MimetypeQuery) -> MimetypeResult {
         match query {
             MimetypeQuery::AskParse { data } => parse(data),

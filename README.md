@@ -18,13 +18,13 @@ Harmony's aim is to do some or all the following eventually:
 - Use the [Bevy](https://bevyengine.org/) game engine to render multimedia content, including rich text, 3D graphics, video, audio and more
 - Use [Wgpu](https://wgpu.rs/) as a portable graphics backend allowing Harmony to run on any device including inside web browsers
 - Allow editing/viewing of any file format, including 3D models, video, audio, images, markdown, etc
-- Have a rich catalogue of optional addons/plugins called [Elements](https://github.com/MarcGuiselin/hmny/tree/main/elements/#readme)
-    - Elements add functionality to the browser, such as parsing an unknown mimetype, rendering a new type of media, adding user authentication, etc
+- Have a rich catalogue of optional addons/plugins called [Wraps](https://github.com/MarcGuiselin/hmny/tree/main/wraps/#readme)
+    - Wraps add functionality to the browser, such as parsing an unknown mimetype, rendering a new type of media, adding user authentication, etc
     - Internally these are [Wasm](https://webassembly.org/) modules that can be easily distributed/downloaded
-    - Harmony will have a built-in package manager that uses signatures from trusted publishers to verify integrity and authenticity of elements and automatically download updates
+    - Harmony will have a built-in package manager that uses signatures from trusted publishers to verify integrity and authenticity of wraps and automatically download updates
 - Host a server to enable users to browse from a web browser or devices with latency/bandwidth constraints such as mobile
 
-These are extremely lofty goals, and I don't expect to achieve them all. My hope is to build an platform using [Elements](https://github.com/MarcGuiselin/hmny/tree/main/elements/#readme) that is extensible enough to allow others to add functionality where they think it is needed.
+These are extremely lofty goals, and I don't expect to achieve them all. My hope is to build an platform using [Wraps](https://github.com/MarcGuiselin/hmny/tree/main/wraps/#readme) that is extensible enough to allow others to add functionality where they think it is needed.
 
 ## Development
 
@@ -44,7 +44,7 @@ Run the following command:
 cargo run
 ```
 
-### How to build elements
+### How to build wraps
 
 Run the following command:
 

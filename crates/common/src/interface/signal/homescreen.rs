@@ -10,7 +10,7 @@ pub enum HomescreenResponse {
     HomeScreen { mime_type: String, data: DataType },
 }
 
-pub type HomescreenResult = Result<HomescreenResponse, ElementError>;
+pub type HomescreenResult = Result<HomescreenResponse, WrapError>;
 
 pub trait HomescreenInterface {
     fn homescreen_query(query: HomescreenQuery) -> HomescreenResult;

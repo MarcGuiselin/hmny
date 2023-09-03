@@ -3574,7 +3574,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "test_element"
+name = "test_wrap"
 version = "0.0.1-dev"
 dependencies = [
  "hmny_common",

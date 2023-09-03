@@ -10,7 +10,7 @@ pub enum MimetypeResponse {
     Dimension(dom::Dimension),
 }
 
-pub type MimetypeResult = Result<MimetypeResponse, ElementError>;
+pub type MimetypeResult = Result<MimetypeResponse, WrapError>;
 
 pub trait MimetypeInterface {
     fn mimetype_query(query: MimetypeQuery) -> MimetypeResult;

@@ -13,11 +13,11 @@ pub enum CommonQuery {
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug)]
 pub enum CommonResponse {
-    Metadata(ElementMetdata),
+    Metadata(WrapMetdata),
     Pong { response: String },
 }
 
-pub type CommonResult = Result<CommonResponse, ElementError>;
+pub type CommonResult = Result<CommonResponse, WrapError>;
 
 pub trait CommonInterface {
     fn common_query(query: CommonQuery) -> CommonResult;

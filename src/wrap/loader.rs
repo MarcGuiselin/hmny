@@ -5,18 +5,18 @@ use std::fs;
 use std::path::Path;
 use url::Url;
 
-pub struct ElementLoaderPlugin;
+pub struct WrapLoaderPlugin;
 
-struct LoadedElement {
+struct LoadedWrap {
     store: wasmer::Store,
     instance: wasmer::Instance,
     signal: wasmer::TypedFunction<(u64, u64, u64), u64>,
-    metadata: Option<ElementMetdata>,
+    metadata: Option<WrapMetdata>,
 }
 
-impl fmt::Debug for LoadedElement {
+impl fmt::Debug for LoadedWrap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "LoadedElement({:?})", self.get_metadata())
+        write!(f, "LoadedWrap({:?})", self.get_metadata())
     }
 }
 
@@ -24,10 +24,10 @@ impl fmt::Debug for LoadedElement {
 pub enum SignalError {
     MemoryTooSmall(usize),
     CallFailed(wasmer::RuntimeError),
-    ElementError(ElementError),
+    WrapError(WrapError),
     DecodeFailed(String),
     EncodeFailed(String),
-    ElementDoesNotExist,
+    WrapDoesNotExist,
 }
 
 fn mem_slice_mut(slice: &mut [u8], lower: usize) -> Result<&mut [u8], SignalError> {
@@ -49,16 +49,16 @@ fn mem_slice(slice: &[u8], lower: usize, upper: usize) -> Result<&[u8], SignalEr
     }
 }
 
-impl LoadedElement {
+impl LoadedWrap {
     const MEMORY: &str = "memory";
 
-    pub fn from_bytes(bytes: impl AsRef<[u8]>) -> Result<Self, ElementLoaderError> {
+    pub fn from_bytes(bytes: impl AsRef<[u8]>) -> Result<Self, WrapLoaderError> {
         // Create a Store.
         let mut store = wasmer::Store::default();
 
         // We then use our store and Wasm bytes to compile a `Module`.
         // A `Module` is a compiled WebAssembly module that isn't ready to execute yet.
-        let module = wasmer::Module::new(&store, bytes).map_err(ElementLoaderError::InvalidWasm)?;
+        let module = wasmer::Module::new(&store, bytes).map_err(WrapLoaderError::InvalidWasm)?;
 
         // Initiate shared memory pool
         let memory = wasmer::Memory::new(&mut store, wasmer::MemoryType::new(1, None, false))
@@ -80,10 +80,10 @@ impl LoadedElement {
         let signal = instance
             .exports
             .get_typed_function(&store, "signal")
-            .map_err(ElementLoaderError::MissingExport)?;
+            .map_err(WrapLoaderError::MissingExport)?;
 
-        // Load a temporary element
-        let mut element = LoadedElement {
+        // Load a temporary wrap
+        let mut wrap = LoadedWrap {
             store,
             instance,
             signal,
@@ -91,23 +91,23 @@ impl LoadedElement {
         };
 
         // Retrieve metadata
-        let metadata = element
+        let metadata = wrap
             .send_signal(CommonQuery::AskMetadata)
-            .map_err(|_| ElementLoaderError::InvalidMetdata)
+            .map_err(|_| WrapLoaderError::InvalidMetdata)
             .and_then(|signal| match signal {
                 CommonResponse::Metadata(metadata) => Ok(metadata),
-                _ => Err(ElementLoaderError::InvalidMetdata),
+                _ => Err(WrapLoaderError::InvalidMetdata),
             })?;
 
-        // Check that element interface version matches own (mismatching versions might lead to deserialization/serialization failure later)
+        // Check that wrap interface version matches own (mismatching versions might lead to deserialization/serialization failure later)
         if !metadata.interface_version.matches_own() {
-            return Err(ElementLoaderError::UnsupportedInterfaceVersion(
+            return Err(WrapLoaderError::UnsupportedInterfaceVersion(
                 metadata.interface_version,
             ));
         }
 
-        element.metadata = Some(metadata);
-        Ok(element)
+        wrap.metadata = Some(metadata);
+        Ok(wrap)
     }
 
     fn get_memory<'a>(&'a self) -> &'a wasmer::Memory {
@@ -158,23 +158,23 @@ impl LoadedElement {
             mem_slice(memory_slice, lower, lower + length)?
         };
 
-        // Retrieve output signal (always a Result<ResponseType, ElementError>)
+        // Retrieve output signal (always a Result<ResponseType, WrapError>)
         let (output_signal, _) = bincode::decode_from_slice::<
-            Result<<Signal as HarmonySignal>::ResponseType, ElementError>,
+            Result<<Signal as HarmonySignal>::ResponseType, WrapError>,
             _,
         >(output_signal_slice, config)
         .map_err(|error| SignalError::DecodeFailed(format!("{}", error)))?;
 
-        output_signal.map_err(SignalError::ElementError)
+        output_signal.map_err(SignalError::WrapError)
     }
 
-    pub fn get_metadata(&self) -> &ElementMetdata {
+    pub fn get_metadata(&self) -> &WrapMetdata {
         self.metadata.as_ref().unwrap()
     }
 }
 
 #[derive(Debug)]
-pub enum ElementLoaderError {
+pub enum WrapLoaderError {
     FileNotFound,
     InvalidWasm(wasmer::CompileError),
     SignalError(SignalError),
@@ -184,19 +184,19 @@ pub enum ElementLoaderError {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
-pub enum ElementKey {
+pub enum WrapKey {
     HomeScreen,
     Mimetype(String),
-    Other(ElementType, String),
+    Other(WrapType, String),
 }
 
 #[derive(Resource)]
-pub struct Elements {
-    source_map: HashMap<Url, ElementKey>,
-    loaded: HashMap<ElementKey, LoadedElement>,
+pub struct Wraps {
+    source_map: HashMap<Url, WrapKey>,
+    loaded: HashMap<WrapKey, LoadedWrap>,
 }
 
-impl Default for Elements {
+impl Default for Wraps {
     fn default() -> Self {
         Self {
             source_map: HashMap::new(),
@@ -210,77 +210,77 @@ fn path_to_url<P: AsRef<Path>>(path: P) -> Url {
     Url::from_file_path(absolute).expect("path could not be converted to url")
 }
 
-impl Elements {
-    pub fn load_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<(), ElementLoaderError> {
-        let file = fs::read(&path).map_err(|_| ElementLoaderError::FileNotFound)?;
+impl Wraps {
+    pub fn load_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<(), WrapLoaderError> {
+        let file = fs::read(&path).map_err(|_| WrapLoaderError::FileNotFound)?;
         self.load(file, path_to_url(path))
     }
 
-    pub fn load(&mut self, bytes: impl AsRef<[u8]>, source: Url) -> Result<(), ElementLoaderError> {
-        let mut element = LoadedElement::from_bytes(bytes)?;
-        println!("Successfully loaded element {:?}", element);
+    pub fn load(&mut self, bytes: impl AsRef<[u8]>, source: Url) -> Result<(), WrapLoaderError> {
+        let mut wrap = LoadedWrap::from_bytes(bytes)?;
+        println!("Successfully loaded wrap {:?}", wrap);
 
         // Send a test ping signal
         let signal = CommonQuery::Ping {
             message: "Harmony core".into(),
         };
-        match element
+        match wrap
             .send_signal(signal)
-            .map_err(ElementLoaderError::SignalError)
+            .map_err(WrapLoaderError::SignalError)
         {
             Ok(response) => println!("Response to ping {:?}", response),
             Err(error) => println!("Error while pinging {:?}", error),
         }
 
-        // Load into hashmap, replacing any existing element
-        let key = Self::get_element_key(&element);
-        self.loaded.insert(key.clone(), element);
+        // Load into hashmap, replacing any existing wrap
+        let key = Self::get_wrap_key(&wrap);
+        self.loaded.insert(key.clone(), wrap);
         self.source_map.insert(source, key);
 
         Ok(())
     }
 
-    fn get_element_key(element: &LoadedElement) -> ElementKey {
-        let ElementMetdata {
-            element_type, name, ..
-        } = element.get_metadata();
-        match element_type {
+    fn get_wrap_key(wrap: &LoadedWrap) -> WrapKey {
+        let WrapMetdata {
+            wrap_type, name, ..
+        } = wrap.get_metadata();
+        match wrap_type {
             // Only one homescreen is loaded at a time
-            ElementType::HomeScreen => ElementKey::HomeScreen,
-            // One element per mimetype
-            ElementType::Mimetype(mime_type) => ElementKey::Mimetype(mime_type.clone()),
-            _ => ElementKey::Other(element_type.clone(), name.into()),
+            WrapType::HomeScreen => WrapKey::HomeScreen,
+            // One wrap per mimetype
+            WrapType::Mimetype(mime_type) => WrapKey::Mimetype(mime_type.clone()),
+            _ => WrapKey::Other(wrap_type.clone(), name.into()),
         }
     }
 
-    pub fn unload_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<(), ElementLoaderError> {
+    pub fn unload_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<(), WrapLoaderError> {
         self.unload(&path_to_url(path))
     }
 
-    pub fn unload(&mut self, source: &Url) -> Result<(), ElementLoaderError> {
+    pub fn unload(&mut self, source: &Url) -> Result<(), WrapLoaderError> {
         self.source_map
             .remove(source)
             .and_then(|key| self.loaded.remove(&key))
-            .ok_or(ElementLoaderError::FileNotFound)?;
+            .ok_or(WrapLoaderError::FileNotFound)?;
 
         Ok(())
     }
 
     pub fn signal<Signal: HarmonySignal>(
         &mut self,
-        key: ElementKey,
+        key: WrapKey,
         signal: Signal,
     ) -> Result<Signal::ResponseType, SignalError> {
-        let mut return_value = Err(SignalError::ElementDoesNotExist);
-        self.loaded.entry(key).and_modify(|element| {
-            return_value = element.send_signal(signal);
+        let mut return_value = Err(SignalError::WrapDoesNotExist);
+        self.loaded.entry(key).and_modify(|wrap| {
+            return_value = wrap.send_signal(signal);
         });
         return_value
     }
 }
 
-impl Plugin for ElementLoaderPlugin {
+impl Plugin for WrapLoaderPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<Elements>();
+        app.init_resource::<Wraps>();
     }
 }

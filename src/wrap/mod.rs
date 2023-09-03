@@ -5,10 +5,10 @@ pub use file_watcher::*;
 mod loader;
 pub use loader::*;
 
-pub struct ElementPlugin;
+pub struct WrapPlugin;
 
-impl Plugin for ElementPlugin {
+impl Plugin for WrapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((ElementFileWatcherPlugin, ElementLoaderPlugin));
+        app.add_plugins((WrapFileWatcherPlugin, WrapLoaderPlugin));
     }
 }

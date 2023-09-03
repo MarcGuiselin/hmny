@@ -1,6 +1,6 @@
-# Elements
+# Wraps
 
-Elements are plugins for harmony browser.
+Wraps are plugins for harmony browser.
 
 - They are written in rust and compiled to wasm
 - They follow strict api guidelines

@@ -20,7 +20,7 @@ impl InterfaceVersion {
         Self(version.into())
     }
 
-    /// Whether or not the interface version of an element matches the current version
+    /// Whether or not the interface version of an wrap matches the current version
     pub fn matches_own(&self) -> bool {
         self.0 == INTERFACE_VERSION
     }
@@ -33,7 +33,7 @@ impl Into<String> for InterfaceVersion {
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq, Hash)]
-pub enum ElementType {
+pub enum WrapType {
     None,
     Test,
     HomeScreen,
@@ -53,17 +53,17 @@ impl RawVectorPtr {
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
-pub struct ElementMetdata {
+pub struct WrapMetdata {
     pub name: String,
     pub version: String,
-    pub element_type: ElementType,
+    pub wrap_type: WrapType,
     pub description: String,
     pub publisher: Publisher,
     pub interface_version: InterfaceVersion,
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug, Eq)]
-pub enum ElementError {
+pub enum WrapError {
     UnsupportedSignal,
     DecodeFailed(String),
     EncodeFailed(String),
@@ -71,15 +71,15 @@ pub enum ElementError {
     Other(String),
 }
 
-impl Into<ElementError> for String {
-    fn into(self) -> ElementError {
-        ElementError::Other(self)
+impl Into<WrapError> for String {
+    fn into(self) -> WrapError {
+        WrapError::Other(self)
     }
 }
 
-impl Into<ElementError> for &str {
-    fn into(self) -> ElementError {
-        ElementError::Other(self.into())
+impl Into<WrapError> for &str {
+    fn into(self) -> WrapError {
+        WrapError::Other(self.into())
     }
 }
 

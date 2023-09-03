@@ -1,18 +1,18 @@
 use hmny_common::prelude::*;
 
-#[define_element{
+#[define_wrap{
     publisher: Publisher::new("Harmony", vec![]),
-    element_type: ElementType::Test,
+    wrap_type: WrapType::Test,
     common_query: match query {
         CommonQuery::Ping { message } => ping(message),
     }
 }]
-struct TestElement(CommonQuery);
+struct TestWrap(CommonQuery);
 
 fn ping(message: String) -> CommonResult {
     let response = format!(
-        r#"Greetings "{}"! I am {}, the element. Pleasure to meet you :)"#,
-        message, ELEMENT_NAME
+        r#"Greetings "{}"! I am {}, the wrap. Pleasure to meet you :)"#,
+        message, WRAP_NAME
     );
 
     Ok(CommonResponse::Pong { response })

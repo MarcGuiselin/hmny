@@ -1,12 +1,12 @@
 use hmny_common::prelude::*;
 
-#[define_element{
+#[define_wrap{
     publisher: Publisher::new("Harmony", vec![]),
-    element_type: ElementType::HomeScreen,
+    wrap_type: WrapType::HomeScreen,
 }]
-struct HomescreenElement(CommonQuery, HomescreenQuery);
+struct HomescreenWrap(CommonQuery, HomescreenQuery);
 
-impl HomescreenInterface for HomescreenElement {
+impl HomescreenInterface for HomescreenWrap {
     fn homescreen_query(query: HomescreenQuery) -> HomescreenResult {
         match query {
             HomescreenQuery::AskHomeScreen => Ok(HomescreenResponse::HomeScreen {

@@ -1,4 +1,4 @@
-use super::Elements;
+use super::Wraps;
 use bevy::prelude::*;
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Result, Watcher};
 use std::{
@@ -10,16 +10,16 @@ use std::{
     },
 };
 
-const ELEMENTS_LOAD_DIR: &str = "./target/wasm32-unknown-unknown/release";
+const WRAPS_LOAD_DIR: &str = "./target/wasm32-unknown-unknown/release";
 
-pub struct ElementFileWatcherPlugin;
+pub struct WrapFileWatcherPlugin;
 
-struct ElementFileWatcherInner {
+struct WrapFileWatcherInner {
     watcher: RecommendedWatcher,
     receiver: Mutex<Receiver<Result<Event>>>,
 }
 
-impl ElementFileWatcherInner {
+impl WrapFileWatcherInner {
     pub fn new() -> Self {
         let (sender, receiver) = std::sync::mpsc::channel();
         let watcher = RecommendedWatcher::new(
@@ -42,15 +42,15 @@ impl ElementFileWatcherInner {
 }
 
 #[derive(Clone, Resource)]
-pub struct ElementFileWatcher {
-    inner: Arc<ElementFileWatcherInner>,
+pub struct WrapFileWatcher {
+    inner: Arc<WrapFileWatcherInner>,
 }
 
-impl Default for ElementFileWatcher {
+impl Default for WrapFileWatcher {
     fn default() -> Self {
-        let mut inner = ElementFileWatcherInner::new();
+        let mut inner = WrapFileWatcherInner::new();
 
-        let path = Path::new(ELEMENTS_LOAD_DIR);
+        let path = Path::new(WRAPS_LOAD_DIR);
         let _ = fs::create_dir_all(path);
         inner.watch(path).expect("Failed to watch path.");
 
@@ -59,15 +59,15 @@ impl Default for ElementFileWatcher {
     }
 }
 
-fn elements_load_from_dir_system(mut elements: ResMut<Elements>) {
-    let paths = fs::read_dir(ELEMENTS_LOAD_DIR).expect("Failed to read elements load directory");
+fn wraps_load_from_dir_system(mut wraps: ResMut<Wraps>) {
+    let paths = fs::read_dir(WRAPS_LOAD_DIR).expect("Failed to read wraps load directory");
 
     paths.into_iter().for_each(|path| {
         let path = path.unwrap().path();
 
         match path.extension() {
             Some(ext) if ext == "wasm" => {
-                if let Err(res) = elements.load_from_path(path.clone()) {
+                if let Err(res) = wraps.load_from_path(path.clone()) {
                     println!("Error while attempting to load plugin {:?}", path);
                     println!("    {:?}", res);
                 }
@@ -77,10 +77,7 @@ fn elements_load_from_dir_system(mut elements: ResMut<Elements>) {
     });
 }
 
-fn elements_file_watcher_system(
-    mut elements: ResMut<Elements>,
-    file_watcher: Res<ElementFileWatcher>,
-) {
+fn wraps_file_watcher_system(mut wraps: ResMut<Wraps>, file_watcher: Res<WrapFileWatcher>) {
     if let Ok(receiver) = file_watcher.inner.receiver.lock() {
         loop {
             let Event { kind, paths, .. } = match receiver.try_recv() {
@@ -94,10 +91,10 @@ fn elements_file_watcher_system(
                 match path.extension() {
                     Some(ext) if ext == "wasm" => match kind {
                         EventKind::Create(_) => {
-                            elements.load_from_path(path).unwrap();
+                            wraps.load_from_path(path).unwrap();
                         }
                         EventKind::Remove(_) => {
-                            elements.unload_from_path(path).unwrap();
+                            wraps.unload_from_path(path).unwrap();
                         }
                         _ => {
                             println!("Unknown file watcher event: {:?} {:?}", path, kind);
@@ -110,10 +107,10 @@ fn elements_file_watcher_system(
     }
 }
 
-impl Plugin for ElementFileWatcherPlugin {
+impl Plugin for WrapFileWatcherPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<ElementFileWatcher>()
-            .add_systems(PreStartup, elements_load_from_dir_system)
-            .add_systems(PostUpdate, elements_file_watcher_system);
+        app.init_resource::<WrapFileWatcher>()
+            .add_systems(PreStartup, wraps_load_from_dir_system)
+            .add_systems(PostUpdate, wraps_file_watcher_system);
     }
 }

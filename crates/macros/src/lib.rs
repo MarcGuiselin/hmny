@@ -2,13 +2,13 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput, Expr, ExprMatch, Fields, Ident, Token};
 
-struct ElementDefinition {
+struct WrapDefinition {
     publisher: Expr,
-    element_type: Expr,
+    wrap_type: Expr,
     common_query_matcher: Option<ExprMatch>,
 }
 
-impl syn::parse::Parse for ElementDefinition {
+impl syn::parse::Parse for WrapDefinition {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         input.parse::<Ident>()?;
         input.parse::<Token![:]>()?;
@@ -17,7 +17,7 @@ impl syn::parse::Parse for ElementDefinition {
 
         input.parse::<Ident>()?;
         input.parse::<Token![:]>()?;
-        let element_type = input.parse()?;
+        let wrap_type = input.parse()?;
         let comma = input.parse::<Token![,]>();
 
         let signal_matcher = if comma.is_ok() && input.peek(Ident) {
@@ -30,7 +30,7 @@ impl syn::parse::Parse for ElementDefinition {
 
         Ok(Self {
             publisher,
-            element_type,
+            wrap_type,
             common_query_matcher: signal_matcher,
         })
     }
@@ -62,12 +62,12 @@ fn to_snake_case_and_remove_last(s: &str) -> String {
 }
 
 #[proc_macro_attribute]
-pub fn define_element(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let ElementDefinition {
+pub fn define_wrap(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let WrapDefinition {
         publisher,
-        element_type,
+        wrap_type,
         common_query_matcher: signal_matcher,
-    } = parse_macro_input!(attr as ElementDefinition);
+    } = parse_macro_input!(attr as WrapDefinition);
     let item = parse_macro_input!(item as DeriveInput);
 
     let signal_arms = if let Some(signal_matcher) = signal_matcher {
@@ -77,10 +77,10 @@ pub fn define_element(attr: TokenStream, item: TokenStream) -> TokenStream {
         quote! {}
     };
 
-    // Name of the struct use to declare and impl the element
+    // Name of the struct use to declare and impl the wrap
     let struct_name = &item.ident;
 
-    // The list of all queries that this element supports
+    // The list of all queries that this wrap supports
     let supported_queries: Vec<&syn::Type> = match &item.data {
         syn::Data::Struct(data_struct) => match &data_struct.fields {
             Fields::Unnamed(fields_unnamed) => fields_unnamed
@@ -103,12 +103,12 @@ pub fn define_element(attr: TokenStream, item: TokenStream) -> TokenStream {
         quote! {
             #query::QUERY_ID => {
                 bincode::decode_from_slice::<#query, _>(input_signal_slice, config)
-                    .map_err(|error| ElementError::DecodeFailed(format!("{}", error)))
+                    .map_err(|error| WrapError::DecodeFailed(format!("{}", error)))
                     .and_then(|(input_signal, _)| {
                         let response = #struct_name::#function_name(input_signal);
     
                         bincode::encode_to_vec(response, config)
-                            .map_err(|error| ElementError::EncodeFailed(format!("{}", error)))
+                            .map_err(|error| WrapError::EncodeFailed(format!("{}", error)))
                     })
             }
         }
@@ -117,9 +117,9 @@ pub fn define_element(attr: TokenStream, item: TokenStream) -> TokenStream {
     quote! {
         struct #struct_name;
 
-        pub const ELEMENT_NAME: &str = env!("CARGO_CRATE_NAME");
-        pub const ELEMENT_VERSION: &str = env!("CARGO_PKG_VERSION");
-        pub const ELEMENT_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
+        pub const WRAP_NAME: &str = env!("CARGO_CRATE_NAME");
+        pub const WRAP_VERSION: &str = env!("CARGO_PKG_VERSION");
+        pub const WRAP_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 
         #[no_mangle]
         pub extern "C" fn signal(
@@ -138,7 +138,7 @@ pub fn define_element(attr: TokenStream, item: TokenStream) -> TokenStream {
             let output_signal_slice_result = match interface_id {
                 #( #match_query_arms )*
         
-                _ => Err(ElementError::UnsupportedInterface(interface_id)),
+                _ => Err(WrapError::UnsupportedInterface(interface_id)),
             };
         
             // An error might stille need to be serialized
@@ -158,11 +158,11 @@ pub fn define_element(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         impl #struct_name {
             fn metadata() -> CommonResponse {
-                CommonResponse::Metadata(ElementMetdata {
-                    name: ELEMENT_NAME.into(),
-                    version: ELEMENT_VERSION.into(),
-                    element_type: #element_type,
-                    description: ELEMENT_DESCRIPTION.into(),
+                CommonResponse::Metadata(WrapMetdata {
+                    name: WRAP_NAME.into(),
+                    version: WRAP_VERSION.into(),
+                    wrap_type: #wrap_type,
+                    description: WRAP_DESCRIPTION.into(),
                     publisher: #publisher,
                     interface_version: InterfaceVersion::new(),
                 })
@@ -174,7 +174,7 @@ pub fn define_element(attr: TokenStream, item: TokenStream) -> TokenStream {
                 match query {
                     CommonQuery::AskMetadata => Ok(#struct_name::metadata()),
                     #signal_arms
-                    _ => Err(ElementError::UnsupportedSignal),
+                    _ => Err(WrapError::UnsupportedSignal),
                 }
             }
         }

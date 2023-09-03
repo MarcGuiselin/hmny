@@ -1,4 +1,4 @@
-use crate::element::{ElementKey, Elements};
+use crate::wrap::{WrapKey, Wraps};
 use bevy::prelude::*;
 use hmny_common::prelude::*;
 
@@ -10,16 +10,16 @@ impl Plugin for HistoryPlugin {
     }
 }
 
-fn setup(mut elements: ResMut<Elements>) {
-    match elements.signal(ElementKey::HomeScreen, HomescreenQuery::AskHomeScreen) {
+fn setup(mut wraps: ResMut<Wraps>) {
+    match wraps.signal(WrapKey::HomeScreen, HomescreenQuery::AskHomeScreen) {
         Ok(HomescreenResponse::HomeScreen { mime_type, data }) => {
             println!(
                 r#"Load home screen with mimetype: "{}" data: "{:?}""#,
                 mime_type, data
             );
 
-            match elements.signal(
-                ElementKey::Mimetype(mime_type),
+            match wraps.signal(
+                WrapKey::Mimetype(mime_type),
                 MimetypeQuery::AskParse { data },
             ) {
                 Ok(MimetypeResponse::Dimension(dimension)) => {

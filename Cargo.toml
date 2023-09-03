@@ -12,9 +12,9 @@ codegen-units = 1
 [workspace]
 members = [
     "crates/*",
-    "elements/homescreen",
-    "elements/mimetypes/*",
-    "elements/test",
+    "wraps/homescreen",
+    "wraps/mimetypes/*",
+    "wraps/test",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
