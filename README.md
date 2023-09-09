@@ -36,6 +36,11 @@ Rust was the obvious choice for this project. First because it's a [pretty neat 
 - Since I'm no graphics engineer, don't have the time to build my own graphics engine and have a strong dislike for the DX of working with javascript-based 3d graphics libraries, Bevy's provided a fantastic starting point while allowing me to drop down to lower-level graphics APIs when needed
 - Freenet ([Locutus](https://github.com/freenet/locutus)) and many of the tools/libraries I'd like to use are already built in rust
 
+### Setup 
+
+1. Install [rustup](https://rustup.rs/)
+2. Follow [these installation steps for GTK4](https://gtk-rs.org/gtk4-rs/stable/latest/book/installation.html)
+
 ### Run Harmony Browser 
 
 Run the following command:
