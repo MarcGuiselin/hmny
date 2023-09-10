@@ -72,23 +72,67 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     // gtk::init().expect("Failed to initialize GTK.");
 
     let width = 500;
-    let mut font = pango::FontDescription::new();
-    font.set_family("Atkinson Hyperlegible");
-    font.set_size(32 * pango::SCALE);
+    let mut text_font = pango::FontDescription::new();
+    text_font.set_family("Atkinson Hyperlegible");
+    text_font.set_size(32 * pango::SCALE);
+    let mut emoji_font = pango::FontDescription::new();
+    emoji_font.set_family("Twitter Color Emoji");
+    emoji_font.set_size(32 * pango::SCALE);
 
     let font_map = pangocairo::FontMap::for_font_type(cairo::FontType::FontTypeFt)
         .expect("Failed to create font map");
     let context = font_map.create_context();
 
     // Load fonts
-    context.set_font_description(Some(&font));
-    context.load_font(&font);
+    context.set_font_description(Some(&text_font));
+    context.load_font(&text_font);
+    context.load_font(&emoji_font);
 
-    let text = "hello world";
+    let text = "👾a🤖b🎃🧜🏾👩‍👩‍👧‍👦hello world";
     let attrs = pango::AttrList::new();
 
     // Set text color to red
     attrs.change(pango::AttrColor::new_foreground(65535, 0, 0));
+
+    // Apply emoji attributes
+    unic::segment::GraphemeIndices::new(text)
+        .into_iter()
+        // Filter out non-emojis
+        .filter(|(_, grapheme)| {
+            grapheme
+                .chars()
+                .any(|char| unic::emoji::char::is_emoji(char))
+        })
+        // Combine groups of emojis together if they are adjacent (i.e. no other characters in between)
+        .fold::<Vec<(u32, u32)>, _>(vec![], |mut acc, (start_index, grapheme)| {
+            let start_index = start_index as u32;
+            let end_index = start_index + grapheme.len() as u32;
+
+            if acc
+                .last()
+                .map(|last| last.1 == start_index)
+                .unwrap_or(false)
+            {
+                acc.last_mut().unwrap().1 = end_index;
+            } else {
+                acc.push((start_index, end_index));
+            }
+
+            acc
+        })
+        .into_iter()
+        .for_each(|(start_index, end_index)| {
+            let mut attr = pango::AttrFontDesc::new(&emoji_font);
+            attr.set_start_index(start_index);
+            attr.set_end_index(end_index);
+            attrs.change(attr);
+
+            // For some reason pango always falls back to the wrong font for emojis
+            let mut attr = pango::AttrInt::new_fallback(false);
+            attr.set_start_index(start_index);
+            attr.set_end_index(end_index);
+            attrs.change(attr);
+        });
 
     // Generate the text layout
     let layout = pango::Layout::new(&context);
