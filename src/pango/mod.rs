@@ -1,10 +1,29 @@
 use bevy::prelude::*;
 
+mod ffi;
+
 #[derive(Default)]
 pub struct PangoPlugin;
 
 impl Plugin for PangoPlugin {
     fn build(&self, app: &mut App) {
+        ffi::font_config_init();
+
+        // Add fonts from asset folder
+        let paths =
+            std::fs::read_dir("./assets/fonts").expect("Failed to read wraps load directory");
+        for path in paths {
+            let path = path.unwrap().path();
+            match path.extension() {
+                Some(ext) if ext == "ttf" => {
+                    if !ffi::font_config_add_file(path.clone()) {
+                        println!("Error while attempting to load plugin {:?}", path);
+                    }
+                }
+                _ => {}
+            }
+        }
+
         app.add_systems(Startup, setup);
         // let dir_path = PathBuf::from(FONTS_LOAD_DIR);
         //
@@ -40,20 +59,26 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     // Seems to be unnecessary
     // gtk::init().expect("Failed to initialize GTK.");
 
-    let width = 200;
+    let width = 500;
     let mut font = pango::FontDescription::new();
-    font.set_family("Arial");
-    font.set_size(64 * pango::SCALE);
+    font.set_family("Atkinson Hyperlegible");
+    font.set_size(32 * pango::SCALE);
 
-    let font_map = pangocairo::FontMap::new();
+    let font_map = pangocairo::FontMap::for_font_type(cairo::FontType::FontTypeFt)
+        .expect("Failed to create font map");
     let context = font_map.create_context();
 
-    // Attempt to load some fonts. idk if this works
+    // Load fonts
+    context.set_font_description(Some(&font));
     context.load_font(&font);
 
     let text = "hello world";
     let attrs = pango::AttrList::new();
-    attrs.insert(pango::AttrColor::new_foreground(255, 0, 0));
+
+    // Set text color to red
+    attrs.change(pango::AttrColor::new_foreground(65535, 0, 0));
+
+    // Generate the text layout
     let layout = pango::Layout::new(&context);
     layout.set_width(width);
     layout.set_font_description(Some(&font));
@@ -69,6 +94,12 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     let surface = cairo::ImageSurface::create(cairo::Format::ARgb32, width, height).unwrap();
     {
         let cx = cairo::Context::new(&surface).unwrap();
+
+        // Draw white bg
+        cx.set_source_rgba(1., 1., 1., 1.);
+        cx.rectangle(0., 0., width as _, height as _);
+        let _ = cx.fill();
+
         pangocairo::update_layout(&cx, &layout);
         pangocairo::show_layout(&cx, &layout);
     }
