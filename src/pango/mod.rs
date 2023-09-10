@@ -80,8 +80,7 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
 
     // Generate the text layout
     let layout = pango::Layout::new(&context);
-    layout.set_width(width);
-    layout.set_font_description(Some(&font));
+    layout.set_width(width * pango::SCALE);
     layout.set_attributes(Some(&attrs));
     layout.set_text(text);
 
