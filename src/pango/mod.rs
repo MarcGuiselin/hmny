@@ -52,6 +52,18 @@ impl Plugin for PangoPlugin {
     }
 }
 
+#[cfg(target_endian = "big")]
+#[inline]
+fn cairo_texture_chunk_to_wgpu(chunk: &[u8]) -> [u8; 4] {
+    [chunk[1], chunk[2], chunk[3], chunk[0]]
+}
+
+#[cfg(target_endian = "little")]
+#[inline]
+fn cairo_texture_chunk_to_wgpu(chunk: &[u8]) -> [u8; 4] {
+    [chunk[2], chunk[1], chunk[0], chunk[3]]
+}
+
 fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     use pango::prelude::*;
 
@@ -112,7 +124,12 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
             depth_or_array_layers: 1,
         },
         bevy::render::render_resource::TextureDimension::D2,
-        data.unwrap().to_vec(),
+        // Convert from ARGB -> RGBA
+        // TODO: cairo pre-multiplies alpha, so we should use a custom material and a mesh
+        data.unwrap()
+            .chunks_exact(4)
+            .flat_map(cairo_texture_chunk_to_wgpu)
+            .collect(),
         bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb,
     ));
 
