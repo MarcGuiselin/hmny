@@ -1,5 +1,6 @@
 use bevy::{prelude::*, window::PresentMode};
 use bevy_framepace::FramepacePlugin;
+use hmny_common::*;
 
 mod canvas;
 mod dimension;
