@@ -5,7 +5,6 @@ use hmny_common::*;
 mod canvas;
 mod dimension;
 mod history;
-mod text;
 mod wrap;
 
 pub struct HarmonyPlugin;
@@ -29,7 +28,6 @@ impl Plugin for HarmonyPlugin {
             canvas::CanvasPlugin,
             dimension::DimensionPlugin,
             history::HistoryPlugin,
-            text::TextPlugin,
             wrap::WrapPlugin,
         ));
     }
