@@ -208,16 +208,20 @@ fn on_rich_text_change(
                 // Apply font styling
                 let mut font = get_font_description(TEXT_FAMILY, font_size);
                 font.set_weight(match weight {
+                    // See https://docs.gtk.org/Pango/enum.Weight.html
                     100 => pango::Weight::Thin,
                     200 => pango::Weight::Ultralight,
                     300 => pango::Weight::Light,
+                    350 => pango::Weight::Semilight,
+                    380 => pango::Weight::Book,
                     400 => pango::Weight::Normal,
                     500 => pango::Weight::Medium,
                     600 => pango::Weight::Semibold,
                     700 => pango::Weight::Bold,
-                    800 => pango::Weight::Heavy,
-                    900 => pango::Weight::Ultraheavy,
-                    _ => pango::Weight::Normal,
+                    800 => pango::Weight::Ultrabold,
+                    900 => pango::Weight::Heavy,
+                    1000 => pango::Weight::Ultraheavy,
+                    weight => pango::Weight::__Unknown(*weight as _),
                 });
                 font.set_style(match style {
                     interface::Style::Normal => pango::Style::Normal,
