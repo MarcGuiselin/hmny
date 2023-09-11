@@ -2,7 +2,7 @@ use crate::*;
 use std::sync::Mutex;
 
 mod ffi;
-mod layout;
+pub mod layout;
 
 #[derive(Default)]
 pub struct CanvasPlugin;

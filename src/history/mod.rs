@@ -1,3 +1,5 @@
+use crate::canvas;
+use crate::canvas::layout;
 use crate::text::{
     bevy_color_to_cosmic, ActiveEditor, Attrs, AttrsList, AttrsOwned, Buffer, BufferLine,
     CosmicAttrs, CosmicEditSpriteBundle, CosmicEditor, CosmicMetrics, CosmicTextPosition, Editor,
@@ -16,11 +18,7 @@ impl Plugin for HistoryPlugin {
     }
 }
 
-fn setup(
-    mut wraps: ResMut<Wraps>,
-    mut commands: Commands,
-    windows: Query<&Window, With<PrimaryWindow>>,
-) {
+fn setup(mut wraps: ResMut<Wraps>, mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     match wraps.signal(WrapKey::HomeScreen, HomescreenQuery::AskHomeScreen) {
         Ok(HomescreenResponse::HomeScreen { mime_type, data }) => {
             println!(
@@ -34,13 +32,12 @@ fn setup(
             ) {
                 Ok(MimetypeResponse::Dimension(dimension)) => {
                     println!(r#"Loading dimension: "{:?}""#, dimension);
-                    let mut count = 0;
-                    dimension.children.into_iter().for_each(|entity| {
-                        let primary_window = windows.single();
-                        let scale_factor = primary_window.scale_factor() as f32;
-                        summon_entity(entity, &mut commands, scale_factor, count);
-                        count += 1;
-                    });
+                    let dimension_entity = commands
+                        .spawn((TransformBundle::default(), VisibilityBundle::default()))
+                        .id();
+                    for element in dimension.children.into_iter() {
+                        summon_element(element, dimension_entity, &mut commands, &mut images);
+                    }
                 }
                 other => {
                     println!("Could not load dimension: {:?}", other);
@@ -53,140 +50,49 @@ fn setup(
     }
 }
 
-fn summon_entity(
-    entity: hmny_common::prelude::Entity,
+fn summon_element(
+    element: hmny_common::prelude::Element,
+    dimension_entity: Entity,
     commands: &mut Commands,
-    scale_factor: f32,
-    count: u16,
+    images: &mut ResMut<Assets<Image>>,
 ) {
-    use hmny_common::prelude::{Component as Comp, Style as Sty};
-
-    let root_entity = commands.spawn_empty().id();
-    let mut is_visible = false;
-    let mut has_transform = false;
-
-    for component in entity.components.into_iter() {
-        match component {
-            Comp::Location2D(_) | Comp::Location3D(_) => {
-                if has_transform {
-                    return;
-                }
-                has_transform = true;
-
-                let (rotation, translation) = match component {
-                    Comp::Location2D(location) => {
-                        let position: Vec2 = location.position.into();
-                        (
-                            location.rotation.into(),
-                            Vec3::new(position.x, position.y, 0.),
-                        )
-                    }
-                    Comp::Location3D(location) => {
-                        (location.rotation.into(), location.position.into())
-                    }
-                    _ => unreachable!(),
-                };
-
-                commands
-                    .get_entity(root_entity)
-                    .unwrap()
-                    .insert(TransformBundle {
-                        local: Transform {
-                            translation,
-                            rotation,
-                            scale: Vec3::ONE,
-                        },
+    match element {
+        Element::Canvas(Canvas { texts }) => {
+            println!("Canvas: {:?}", texts);
+            let canvas_entity = commands
+                .spawn(canvas::CanvasBundle {
+                    canvas: canvas::Canvas {
+                        max_dimension: 400.,
+                        layout: layout::Layout::FlexBasic(layout::FlexBasic {
+                            direction: layout::Direction::Vertical,
+                            gap: 10.,
+                        }),
+                    },
+                    transform: Transform {
+                        translation: Vec3::new(-200., 200., 0.),
                         ..Default::default()
-                    });
-            }
-            Comp::Text(hmny_common::prelude::Text {
-                color: default_color,
-                font_size,
-                line_height,
-                spans,
-            }) => {
-                is_visible = true;
-                let line_height = font_size * line_height;
+                    },
+                    ..Default::default()
+                })
+                .set_parent(dimension_entity)
+                .id();
 
-                let mut buffer =
-                    Buffer::new_empty(Metrics::new(font_size, line_height).scale(scale_factor));
-
-                let mut line_text = String::new();
-                let attrs = Attrs::new().family(Family::Name(FONT_NAME));
-                let mut attrs_list = AttrsList::new(attrs);
-                for TextSpan {
-                    text,
-                    color: override_color,
-                    style,
-                    weight,
-                } in spans.into_iter()
-                {
-                    let color = override_color.as_ref().unwrap_or(&default_color);
-                    let attrs = Attrs::new()
-                        .style(match style {
-                            Sty::Normal => cosmic_text::Style::Normal,
-                            Sty::Italic => cosmic_text::Style::Italic,
-                            Sty::Oblique => cosmic_text::Style::Oblique,
-                        })
-                        .weight(cosmic_text::Weight(weight))
-                        .color(cosmic_text::Color::rgba(color.r, color.g, color.b, 255));
-
-                    let start = line_text.len();
-                    line_text.push_str(&text);
-                    let end = line_text.len();
-                    attrs_list.add_span(start..end, attrs);
-                }
-                buffer
-                    .lines
-                    .push(BufferLine::new(line_text, attrs_list, Shaping::Advanced));
-
-                let editor = CosmicEditor(Editor::new(buffer));
-                let inner_entity = commands
-                    .spawn((
-                        ReadOnly,
-                        CosmicEditSpriteBundle {
-                            sprite: Sprite {
-                                custom_size: Some(Vec2::new(400., 100.)),
-                                ..Default::default()
-                            },
-                            cosmic_metrics: CosmicMetrics {
-                                font_size,
-                                line_height,
-                                scale_factor,
-                            },
-                            text_position: CosmicTextPosition::TopLeft,
-                            cosmic_attrs: CosmicAttrs(AttrsOwned::new(attrs)),
-                            editor,
-                            transform: Transform::from_translation(Vec3::new(
-                                0.,
-                                -110.0 * count as f32,
-                                10.,
-                            )),
-                            background_color: BackgroundColor(Color::rgba(1., 0., 0., 0.2)),
+            for text in texts.into_iter() {
+                //texts.pop();
+                let texture = images.add(Image::default());
+                commands
+                    .spawn(canvas::RichTextBundle {
+                        rich_text: canvas::RichText(text),
+                        texture,
+                        sprite: Sprite {
+                            anchor: bevy::sprite::Anchor::TopLeft,
                             ..Default::default()
                         },
-                    ))
-                    .id();
-
-                commands
-                    .get_entity(root_entity)
-                    .unwrap()
-                    .add_child(inner_entity);
+                        ..Default::default()
+                    })
+                    .set_parent(canvas_entity);
             }
         }
-    }
-
-    if !has_transform {
-        commands
-            .get_entity(root_entity)
-            .unwrap()
-            .insert(TransformBundle::default());
-    }
-    if is_visible {
-        commands
-            .get_entity(root_entity)
-            .unwrap()
-            .insert(VisibilityBundle::default());
     }
 }
 

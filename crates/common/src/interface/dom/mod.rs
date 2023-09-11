@@ -10,18 +10,15 @@ pub use text::*;
 #[derive(Clone, Decode, Encode, PartialEq, Debug)]
 pub struct Dimension {
     pub title: String,
-    pub children: Vec<Entity>,
+    pub children: Vec<Element>,
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug)]
-pub struct Entity {
-    pub label: Option<String>,
-    pub components: Vec<Component>,
+pub enum Element {
+    Canvas(Canvas),
 }
 
 #[derive(Clone, Decode, Encode, PartialEq, Debug)]
-pub enum Component {
-    Location2D(Location2D),
-    Location3D(Location3D),
-    Text(Text),
+pub struct Canvas {
+    pub texts: Vec<Text>,
 }

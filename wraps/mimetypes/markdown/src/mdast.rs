@@ -50,19 +50,19 @@ pub fn root_to_dimension(root: Root) -> Result<Dimension, String> {
         })
         .unwrap_or("None".into());
 
-    let children = root
+    let texts = root
         .children
         .into_iter()
         .map(|node| node_to_entities(node))
-        .collect::<Result<Vec<Vec<Entity>>, String>>()?
-        .into_iter()
-        .flatten()
-        .collect();
+        .collect::<Result<Vec<_>, String>>()?;
 
-    Ok(Dimension { title, children })
+    Ok(Dimension {
+        title,
+        children: vec![Element::Canvas(Canvas { texts })],
+    })
 }
 
-fn node_to_entities(root: Node) -> Result<Vec<Entity>, String> {
+fn node_to_entities(root: Node) -> Result<hmny_common::prelude::Text, String> {
     match root {
         // Parents.
         Node::Root(_) => Err("Root not implemented".into()),
@@ -78,28 +78,22 @@ fn node_to_entities(root: Node) -> Result<Vec<Entity>, String> {
         Node::Strong(_) => Err("Strong not implemented".into()),
         Node::Heading(Heading {
             children, depth, ..
-        }) => Ok(vec![Entity {
-            label: None,
-            components: vec![Component::Text(hmny_common::prelude::Text {
-                spans: children_to_text_spans(children, Style::Normal, Weight::SEMIBOLD),
-                font_size: FontSize::from_header_depth(depth),
-                line_height: LINE_HEIGHT,
-                color: TextColor::BLACK,
-            })],
-        }]),
+        }) => Ok(hmny_common::prelude::Text {
+            spans: children_to_text_spans(children, Style::Normal, Weight::SEMIBOLD),
+            font_size: FontSize::from_header_depth(depth),
+            line_height: LINE_HEIGHT,
+            color: TextColor::BLACK,
+        }),
         Node::Table(_) => Err("Table not implemented".into()),
         Node::TableRow(_) => Err("TableRow not implemented".into()),
         Node::TableCell(_) => Err("TableCell not implemented".into()),
         Node::ListItem(_) => Err("ListItem not implemented".into()),
-        Node::Paragraph(Paragraph { children, .. }) => Ok(vec![Entity {
-            label: None,
-            components: vec![Component::Text(hmny_common::prelude::Text {
-                spans: children_to_text_spans(children, Style::Normal, Weight::NORMAL),
-                font_size: FontSize::P,
-                line_height: LINE_HEIGHT,
-                color: TextColor::BLACK,
-            })],
-        }]),
+        Node::Paragraph(Paragraph { children, .. }) => Ok(hmny_common::prelude::Text {
+            spans: children_to_text_spans(children, Style::Normal, Weight::NORMAL),
+            font_size: FontSize::P,
+            line_height: LINE_HEIGHT,
+            color: TextColor::BLACK,
+        }),
 
         // Literals.
         Node::MdxjsEsm(_) => Err("MdxjsEsm not implemented".into()),
