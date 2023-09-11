@@ -59,9 +59,7 @@ pub struct CanvasBundle {
 }
 
 #[derive(Component, Clone, Default)]
-pub struct RichText {
-    pub texts: Vec<interface::Text>,
-}
+pub struct RichText(pub interface::Text);
 
 #[derive(Bundle, Default)]
 pub struct RichTextBundle {
@@ -163,189 +161,196 @@ fn on_rich_text_change(
 ) {
     let context = context.lock().unwrap();
 
-    for (RichText { texts }, mut sprite, image_handle, parent) in rich_texts.iter_mut() {
+    for (
+        RichText(interface::Text {
+            spans,
+            color: default_color,
+            font_size,
+            line_height,
+        }),
+        mut sprite,
+        image_handle,
+        parent,
+    ) in rich_texts.iter_mut()
+    {
         // Get available canvas width
         let (canvas, mut canvas_computed) = canvases
             .get_mut(parent.get())
             .expect("RichText parent must be a Canvas");
         let pango_max_dimension = canvas.max_dimension as i32 * pango::SCALE;
 
-        for interface::Text {
-            spans,
-            color: default_color,
-            font_size,
-            line_height,
-        } in texts.iter()
+        // Setup fonts
+        let font_size: Option<f32> = Some(*font_size);
+        let emoji_font = get_font_description(EMOJI_FAMILY, font_size);
+
+        // Build attributes
+        let attrs = pango::AttrList::new();
+        attrs.change(get_foreground(default_color));
+
+        let mut text = String::new();
+        let mut start_index = 0;
+        for interface::TextSpan {
+            text: text_span,
+            color: override_color,
+            style,
+            weight,
+        } in spans.into_iter()
         {
-            // Setup fonts
-            let font_size: Option<f32> = Some(*font_size);
-            let emoji_font = get_font_description(EMOJI_FAMILY, font_size);
+            text.push_str(text_span);
+            let end_index = start_index + text_span.len() as u32;
 
-            // Build attributes
-            let attrs = pango::AttrList::new();
-            attrs.change(get_foreground(default_color));
-
-            let mut text = String::new();
-            let mut start_index = 0;
-            for interface::TextSpan {
-                text: text_span,
-                color: override_color,
-                style,
-                weight,
-            } in spans.into_iter()
-            {
-                text.push_str(text_span);
-                let end_index = start_index + text_span.len() as u32;
-
-                // Apply optional color override
-                if let Some(color) = override_color {
-                    let mut attr = get_foreground(color);
-                    attr.set_start_index(start_index);
-                    attr.set_end_index(end_index);
-                    attrs.change(attr);
-                }
-
-                // Apply font styling
-                let mut font = get_font_description(TEXT_FAMILY, font_size);
-                font.set_weight(match weight {
-                    // See https://docs.gtk.org/Pango/enum.Weight.html
-                    100 => pango::Weight::Thin,
-                    200 => pango::Weight::Ultralight,
-                    300 => pango::Weight::Light,
-                    350 => pango::Weight::Semilight,
-                    380 => pango::Weight::Book,
-                    400 => pango::Weight::Normal,
-                    500 => pango::Weight::Medium,
-                    600 => pango::Weight::Semibold,
-                    700 => pango::Weight::Bold,
-                    800 => pango::Weight::Ultrabold,
-                    900 => pango::Weight::Heavy,
-                    1000 => pango::Weight::Ultraheavy,
-                    weight => pango::Weight::__Unknown(*weight as _),
-                });
-                font.set_style(match style {
-                    interface::Style::Normal => pango::Style::Normal,
-                    interface::Style::Italic => pango::Style::Italic,
-                    interface::Style::Oblique => pango::Style::Oblique,
-                });
-                let mut attr = pango::AttrFontDesc::new(&font);
+            // Apply optional color override
+            if let Some(color) = override_color {
+                let mut attr = get_foreground(color);
                 attr.set_start_index(start_index);
                 attr.set_end_index(end_index);
                 attrs.change(attr);
-
-                // Apply emoji attributes
-                unic::segment::GraphemeIndices::new(text_span)
-                    .into_iter()
-                    // Filter out non-emojis
-                    .filter(|(_, grapheme)| {
-                        grapheme
-                            .chars()
-                            .any(|char| unic::emoji::char::is_emoji(char))
-                    })
-                    // Combine groups of emojis together if they are adjacent (i.e. no other characters in between)
-                    .fold::<Vec<(u32, u32)>, _>(vec![], |mut acc, (index, grapheme)| {
-                        let start_index = start_index + index as u32;
-                        let end_index = start_index + grapheme.len() as u32;
-
-                        if acc
-                            .last()
-                            .map(|last| last.1 == start_index)
-                            .unwrap_or(false)
-                        {
-                            acc.last_mut().unwrap().1 = end_index;
-                        } else {
-                            acc.push((start_index, end_index));
-                        }
-
-                        acc
-                    })
-                    .into_iter()
-                    .for_each(|(start_index, end_index)| {
-                        let mut attr = pango::AttrFontDesc::new(&emoji_font);
-                        attr.set_start_index(start_index);
-                        attr.set_end_index(end_index);
-                        attrs.change(attr);
-
-                        // For some reason pango always falls back to the wrong font for emojis
-                        let mut attr = pango::AttrInt::new_fallback(false);
-                        attr.set_start_index(start_index);
-                        attr.set_end_index(end_index);
-                        attrs.change(attr);
-                    });
-
-                start_index = end_index;
             }
 
-            // Generate the text layout
-            let layout = pango::Layout::new(&context);
-            layout.set_spacing(((*line_height as f32 - 1.) * pango::SCALE as f32) as _);
-            layout.set_attributes(Some(&attrs));
-            layout.set_text(&text);
-            match &canvas.layout {
-                layout::Layout::FlexBasic(layout::FlexBasic { direction, .. }) => match direction {
-                    layout::Direction::Vertical => {
-                        layout.set_width(pango_max_dimension);
+            // Apply font styling
+            let mut font = get_font_description(TEXT_FAMILY, font_size);
+            font.set_weight(match weight {
+                // See https://docs.gtk.org/Pango/enum.Weight.html
+                100 => pango::Weight::Thin,
+                200 => pango::Weight::Ultralight,
+                300 => pango::Weight::Light,
+                350 => pango::Weight::Semilight,
+                380 => pango::Weight::Book,
+                400 => pango::Weight::Normal,
+                500 => pango::Weight::Medium,
+                600 => pango::Weight::Semibold,
+                700 => pango::Weight::Bold,
+                800 => pango::Weight::Ultrabold,
+                900 => pango::Weight::Heavy,
+                1000 => pango::Weight::Ultraheavy,
+                weight => pango::Weight::__Unknown(*weight as _),
+            });
+            font.set_style(match style {
+                interface::Style::Normal => pango::Style::Normal,
+                interface::Style::Italic => pango::Style::Italic,
+                interface::Style::Oblique => pango::Style::Oblique,
+            });
+            let mut attr = pango::AttrFontDesc::new(&font);
+            attr.set_start_index(start_index);
+            attr.set_end_index(end_index);
+            attrs.change(attr);
+
+            // Apply emoji attributes
+            unic::segment::GraphemeIndices::new(text_span)
+                .into_iter()
+                // Filter out non-emojis
+                .filter(|(_, grapheme)| {
+                    grapheme
+                        .chars()
+                        .any(|char| unic::emoji::char::is_emoji(char))
+                })
+                // Combine groups of emojis together if they are adjacent (i.e. no other characters in between)
+                .fold::<Vec<(u32, u32)>, _>(vec![], |mut acc, (index, grapheme)| {
+                    let start_index = start_index + index as u32;
+                    let end_index = start_index + grapheme.len() as u32;
+
+                    if acc
+                        .last()
+                        .map(|last| last.1 == start_index)
+                        .unwrap_or(false)
+                    {
+                        acc.last_mut().unwrap().1 = end_index;
+                    } else {
+                        acc.push((start_index, end_index));
                     }
-                    layout::Direction::Horizontal => {
-                        layout.set_height(pango_max_dimension);
-                    }
-                },
-            }
 
-            // Get true size of the rendered text
-            let (width, height) = layout.size();
-            let width = width / pango::SCALE;
-            let height = height / pango::SCALE;
+                    acc
+                })
+                .into_iter()
+                .for_each(|(start_index, end_index)| {
+                    let mut attr = pango::AttrFontDesc::new(&emoji_font);
+                    attr.set_start_index(start_index);
+                    attr.set_end_index(end_index);
+                    attrs.change(attr);
 
-            // Draw the text
-            let surface =
-                cairo::ImageSurface::create(cairo::Format::ARgb32, width, height).unwrap();
-            {
-                let cx = cairo::Context::new(&surface).unwrap();
+                    // For some reason pango always falls back to the wrong font for emojis
+                    let mut attr = pango::AttrInt::new_fallback(false);
+                    attr.set_start_index(start_index);
+                    attr.set_end_index(end_index);
+                    attrs.change(attr);
+                });
 
-                // Draw white bg
-                cx.set_source_rgba(1., 1., 1., 1.);
-                cx.rectangle(0., 0., width as _, height as _);
-                let _ = cx.fill();
+            start_index = end_index;
+        }
 
-                pangocairo::update_layout(&cx, &layout);
-                pangocairo::show_layout(&cx, &layout);
-            }
-            let data = surface.take_data();
+        // Generate the text layout
+        let layout = pango::Layout::new(&context);
+        layout.set_spacing(((*line_height as f32 - 1.) * pango::SCALE as f32) as _);
+        layout.set_attributes(Some(&attrs));
+        layout.set_text(&text);
+        match &canvas.layout {
+            layout::Layout::FlexBasic(layout::FlexBasic { direction, .. }) => match direction {
+                layout::Direction::Vertical => {
+                    layout.set_width(pango_max_dimension);
+                }
+                layout::Direction::Horizontal => {
+                    layout.set_height(pango_max_dimension);
+                }
+            },
+        }
 
-            // Copy the image data into a bevy image
-            let image = images.get_mut(image_handle).unwrap();
-            image.texture_descriptor.size = bevy::render::render_resource::Extent3d {
-                width: width as u32,
-                height: height as u32,
-                depth_or_array_layers: 1,
-            };
-            image.data = {
-                // Convert from ARGB -> RGBA
-                // TODO: cairo pre-multiplies alpha, so we should use a custom material and a mesh
-                data.unwrap()
-                    .chunks_exact(4)
-                    .flat_map(cairo_texture_chunk_to_wgpu)
-                    .collect()
-            };
+        // Get true size of the rendered text
+        let (width, height) = layout.size();
+        let width = width / pango::SCALE;
+        let height = height / pango::SCALE;
 
-            // Update sprite
-            let new_size = Vec2::new(width as f32, height as f32);
-            let old_size = sprite.custom_size.unwrap_or_default();
-            sprite.custom_size.replace(new_size);
+        // TODO: handle device scale factor
+        // windows: Query<&Window, With<PrimaryWindow>>,
+        // let primary_window = windows.single();
+        // let scale_factor = primary_window.scale_factor() as f32;
 
-            // Depending on the layout, we need to update the canvas dimensions
-            // Do this by removing the old size and adding the new size
-            match &canvas.layout {
-                layout::Layout::FlexBasic(layout::FlexBasic { direction, .. }) => match direction {
-                    layout::Direction::Vertical => {
-                        canvas_computed.dimensions.y += new_size.y - old_size.y;
-                    }
-                    layout::Direction::Horizontal => {
-                        canvas_computed.dimensions.x += new_size.x - old_size.x;
-                    }
-                },
-            }
+        // Draw the text
+        let surface = cairo::ImageSurface::create(cairo::Format::ARgb32, width, height).unwrap();
+        {
+            let cx = cairo::Context::new(&surface).unwrap();
+
+            // Draw white bg
+            cx.set_source_rgba(1., 1., 1., 1.);
+            cx.rectangle(0., 0., width as _, height as _);
+            let _ = cx.fill();
+
+            pangocairo::update_layout(&cx, &layout);
+            pangocairo::show_layout(&cx, &layout);
+        }
+        let data = surface.take_data();
+
+        // Copy the image data into a bevy image
+        let image = images.get_mut(image_handle).unwrap();
+        image.texture_descriptor.size = bevy::render::render_resource::Extent3d {
+            width: width as u32,
+            height: height as u32,
+            depth_or_array_layers: 1,
+        };
+        image.data = {
+            // Convert from ARGB -> RGBA
+            // TODO: cairo pre-multiplies alpha, so we should use a custom material and a mesh
+            data.unwrap()
+                .chunks_exact(4)
+                .flat_map(cairo_texture_chunk_to_wgpu)
+                .collect()
+        };
+
+        // Update sprite
+        let new_size = Vec2::new(width as f32, height as f32);
+        let old_size = sprite.custom_size.unwrap_or_default();
+        sprite.custom_size.replace(new_size);
+
+        // Depending on the layout, we need to update the canvas dimensions
+        // Do this by removing the old size and adding the new size
+        match &canvas.layout {
+            layout::Layout::FlexBasic(layout::FlexBasic { direction, .. }) => match direction {
+                layout::Direction::Vertical => {
+                    canvas_computed.dimensions.y += new_size.y - old_size.y;
+                }
+                layout::Direction::Horizontal => {
+                    canvas_computed.dimensions.x += new_size.x - old_size.x;
+                }
+            },
         }
     }
 }
@@ -401,19 +406,17 @@ fn test(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     let texture = images.add(Image::default());
     commands
         .spawn(RichTextBundle {
-            rich_text: RichText {
-                texts: vec![interface::Text {
-                    spans: vec![interface::TextSpan {
-                        text: "👾a🤖b🎃🧜🏾👩‍👩‍👧‍👦hello world".into(),
-                        color: None,
-                        style: interface::Style::Normal,
-                        weight: 400,
-                    }],
-                    color: interface::TextColor { r: 0, g: 0, b: 0 },
-                    font_size: 24.,
-                    line_height: 1.2,
+            rich_text: RichText(interface::Text {
+                spans: vec![interface::TextSpan {
+                    text: "👾a🤖b🎃🧜🏾👩‍👩‍👧‍👦hello world".into(),
+                    color: None,
+                    style: interface::Style::Normal,
+                    weight: 400,
                 }],
-            },
+                color: interface::TextColor { r: 0, g: 0, b: 0 },
+                font_size: 24.,
+                line_height: 1.2,
+            }),
             texture,
             sprite: Sprite {
                 anchor: bevy::sprite::Anchor::TopLeft,
@@ -426,33 +429,32 @@ fn test(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     let texture = images.add(Image::default());
     commands
         .spawn(RichTextBundle {
-            rich_text: RichText {
-                texts: vec![interface::Text {
-                    spans: vec![
-                        interface::TextSpan {
-                            text: "Lorem ipsum dolor sit amet, ".into(),
-                            color: None,
-                            style: interface::Style::Normal,
-                            weight: 400,
-                        },
-                        interface::TextSpan {
-                            text: "consectetur adipiscing elit".into(),
-                            color: Some(interface::TextColor { r: 255, g: 0, b: 0 }),
-                            style: interface::Style::Oblique,
-                            weight: 800,
-                        },
-                        interface::TextSpan {
-                            text: ", sed do eiusmod tempor incididunt ut labore et dolore magna aliqua".into(),
-                            color: None,
-                            style: interface::Style::Normal,
-                            weight: 400,
-                        },
-                    ],
-                    color: interface::TextColor { r: 0, g: 255, b: 0 },
-                    font_size: 16.,
-                    line_height: 1.2,
-                }],
-            },
+            rich_text: RichText(interface::Text {
+                spans: vec![
+                    interface::TextSpan {
+                        text: "Lorem ipsum dolor sit amet, ".into(),
+                        color: None,
+                        style: interface::Style::Normal,
+                        weight: 400,
+                    },
+                    interface::TextSpan {
+                        text: "consectetur adipiscing elit".into(),
+                        color: Some(interface::TextColor { r: 255, g: 0, b: 0 }),
+                        style: interface::Style::Oblique,
+                        weight: 800,
+                    },
+                    interface::TextSpan {
+                        text: ", sed do eiusmod tempor incididunt ut labore et dolore magna aliqua"
+                            .into(),
+                        color: None,
+                        style: interface::Style::Normal,
+                        weight: 400,
+                    },
+                ],
+                color: interface::TextColor { r: 0, g: 255, b: 0 },
+                font_size: 16.,
+                line_height: 1.2,
+            }),
             texture,
             sprite: Sprite {
                 anchor: bevy::sprite::Anchor::TopLeft,
