@@ -9,15 +9,13 @@ pub struct CanvasPlugin;
 
 impl Plugin for CanvasPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, startup)
-            .add_systems(PostStartup, test)
-            .add_systems(
-                Update,
-                (
-                    on_rich_text_change.before(on_canvas_change),
-                    on_canvas_change,
-                ),
-            );
+        app.add_systems(Startup, startup).add_systems(
+            Update,
+            (
+                on_rich_text_change.before(on_canvas_change),
+                on_canvas_change,
+            ),
+        );
     }
 }
 
@@ -387,80 +385,4 @@ fn on_canvas_change(
             }
         }
     }
-}
-
-fn test(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
-    let canvas = commands
-        .spawn(CanvasBundle {
-            canvas: Canvas {
-                max_dimension: 400.,
-                layout: layout::Layout::FlexBasic(layout::FlexBasic {
-                    direction: layout::Direction::Vertical,
-                    gap: 10.,
-                }),
-            },
-            ..Default::default()
-        })
-        .id();
-
-    let texture = images.add(Image::default());
-    commands
-        .spawn(RichTextBundle {
-            rich_text: RichText(interface::Text {
-                spans: vec![interface::TextSpan {
-                    text: "👾a🤖b🎃🧜🏾👩‍👩‍👧‍👦hello world".into(),
-                    color: None,
-                    style: interface::Style::Normal,
-                    weight: 400,
-                }],
-                color: interface::TextColor { r: 0, g: 0, b: 0 },
-                font_size: 24.,
-                line_height: 1.2,
-            }),
-            texture,
-            sprite: Sprite {
-                anchor: bevy::sprite::Anchor::TopLeft,
-                ..Default::default()
-            },
-            ..Default::default()
-        })
-        .set_parent(canvas);
-
-    let texture = images.add(Image::default());
-    commands
-        .spawn(RichTextBundle {
-            rich_text: RichText(interface::Text {
-                spans: vec![
-                    interface::TextSpan {
-                        text: "Lorem ipsum dolor sit amet, ".into(),
-                        color: None,
-                        style: interface::Style::Normal,
-                        weight: 400,
-                    },
-                    interface::TextSpan {
-                        text: "consectetur adipiscing elit".into(),
-                        color: Some(interface::TextColor { r: 255, g: 0, b: 0 }),
-                        style: interface::Style::Oblique,
-                        weight: 800,
-                    },
-                    interface::TextSpan {
-                        text: ", sed do eiusmod tempor incididunt ut labore et dolore magna aliqua"
-                            .into(),
-                        color: None,
-                        style: interface::Style::Normal,
-                        weight: 400,
-                    },
-                ],
-                color: interface::TextColor { r: 0, g: 255, b: 0 },
-                font_size: 16.,
-                line_height: 1.2,
-            }),
-            texture,
-            sprite: Sprite {
-                anchor: bevy::sprite::Anchor::TopLeft,
-                ..Default::default()
-            },
-            ..Default::default()
-        })
-        .set_parent(canvas);
 }
