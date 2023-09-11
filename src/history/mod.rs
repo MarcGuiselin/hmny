@@ -15,7 +15,7 @@ impl Plugin for HistoryPlugin {
 fn setup(mut wraps: ResMut<Wraps>, mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     match wraps.signal(WrapKey::HomeScreen, HomescreenQuery::AskHomeScreen) {
         Ok(HomescreenResponse::HomeScreen { mime_type, data }) => {
-            println!(
+            info!(
                 r#"Load home screen with mimetype: "{}" data: "{:?}""#,
                 mime_type, data
             );
@@ -25,7 +25,7 @@ fn setup(mut wraps: ResMut<Wraps>, mut commands: Commands, mut images: ResMut<As
                 MimetypeQuery::AskParse { data },
             ) {
                 Ok(MimetypeResponse::Dimension(dimension)) => {
-                    println!(r#"Loading dimension: "{:?}""#, dimension);
+                    info!(r#"Loading dimension: "{:?}""#, dimension);
                     let dimension_entity = commands
                         .spawn((TransformBundle::default(), VisibilityBundle::default()))
                         .id();
@@ -34,12 +34,12 @@ fn setup(mut wraps: ResMut<Wraps>, mut commands: Commands, mut images: ResMut<As
                     }
                 }
                 other => {
-                    println!("Could not load dimension: {:?}", other);
+                    error!("Could not load dimension: {:?}", other);
                 }
             }
         }
         other => {
-            println!("Could not load home screen data: {:?}", other);
+            error!("Could not load home screen data: {:?}", other);
         }
     }
 }
@@ -52,7 +52,7 @@ fn summon_element(
 ) {
     match element {
         Element::Canvas(Canvas { texts }) => {
-            println!("Canvas: {:?}", texts);
+            info!("Canvas: {:?}", texts);
             let canvas_entity = commands
                 .spawn(canvas::CanvasBundle {
                     canvas: canvas::Canvas {

@@ -218,7 +218,7 @@ impl Wraps {
 
     pub fn load(&mut self, bytes: impl AsRef<[u8]>, source: Url) -> Result<(), WrapLoaderError> {
         let mut wrap = LoadedWrap::from_bytes(bytes)?;
-        println!("Successfully loaded wrap {:?}", wrap);
+        info!("Successfully loaded wrap {:?}", wrap);
 
         // Send a test ping signal
         let signal = CommonQuery::Ping {
@@ -228,8 +228,11 @@ impl Wraps {
             .send_signal(signal)
             .map_err(WrapLoaderError::SignalError)
         {
-            Ok(response) => println!("Response to ping {:?}", response),
-            Err(error) => println!("Error while pinging {:?}", error),
+            Ok(response) => info!("Response to ping {:?}", response),
+            Err(WrapLoaderError::SignalError(SignalError::WrapError(
+                WrapError::UnsupportedSignal,
+            ))) => {}
+            Err(error) => warn!("Error while pinging {:?}", error),
         }
 
         // Load into hashmap, replacing any existing wrap

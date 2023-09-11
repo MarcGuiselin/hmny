@@ -68,8 +68,8 @@ fn wraps_load_from_dir_system(mut wraps: ResMut<Wraps>) {
         match path.extension() {
             Some(ext) if ext == "wasm" => {
                 if let Err(res) = wraps.load_from_path(path.clone()) {
-                    println!("Error while attempting to load plugin {:?}", path);
-                    println!("    {:?}", res);
+                    error!("Error while attempting to load plugin {:?}", path);
+                    error!("    {:?}", res);
                 }
             }
             _ => {}
@@ -97,7 +97,7 @@ fn wraps_file_watcher_system(mut wraps: ResMut<Wraps>, file_watcher: Res<WrapFil
                             wraps.unload_from_path(path).unwrap();
                         }
                         _ => {
-                            println!("Unknown file watcher event: {:?} {:?}", path, kind);
+                            warn!("Unknown file watcher event: {:?} {:?}", path, kind);
                         }
                     },
                     _ => {}

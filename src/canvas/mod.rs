@@ -103,7 +103,7 @@ fn startup(mut commands: Commands) {
         match path.extension() {
             Some(ext) if ext == "ttf" => {
                 if !ffi::font_config_add_file(path.clone()) {
-                    println!("Error while attempting to load plugin {:?}", path);
+                    error!("Error while attempting to load font {:?}", path);
                 }
             }
             _ => {}
