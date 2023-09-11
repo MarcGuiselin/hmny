@@ -3,9 +3,9 @@ use bevy::prelude::*;
 mod ffi;
 
 #[derive(Default)]
-pub struct PangoPlugin;
+pub struct CanvasPlugin;
 
-impl Plugin for PangoPlugin {
+impl Plugin for CanvasPlugin {
     fn build(&self, app: &mut App) {
         ffi::font_config_init();
 

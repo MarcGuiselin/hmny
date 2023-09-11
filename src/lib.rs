@@ -1,9 +1,9 @@
 use bevy::{prelude::*, window::PresentMode};
 use bevy_framepace::FramepacePlugin;
 
+mod canvas;
 mod dimension;
 mod history;
-mod pango;
 mod text;
 mod wrap;
 
@@ -25,11 +25,11 @@ impl Plugin for HarmonyPlugin {
             }),
             FramepacePlugin,
             // Harmony Core Plugins
+            canvas::CanvasPlugin,
             dimension::DimensionPlugin,
-            pango::PangoPlugin,
-            wrap::WrapPlugin,
-            text::TextPlugin,
             history::HistoryPlugin,
+            text::TextPlugin,
+            wrap::WrapPlugin,
         ));
     }
 }
