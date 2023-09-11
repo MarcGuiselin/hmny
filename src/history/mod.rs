@@ -26,9 +26,7 @@ fn setup(mut wraps: ResMut<Wraps>, mut commands: Commands, mut images: ResMut<As
             ) {
                 Ok(MimetypeResponse::Dimension(dimension)) => {
                     info!(r#"Loading dimension: "{:?}""#, dimension);
-                    let dimension_entity = commands
-                        .spawn((TransformBundle::default(), VisibilityBundle::default()))
-                        .id();
+                    let dimension_entity = commands.spawn(SpatialBundle::default()).id();
                     for element in dimension.children.into_iter() {
                         summon_element(element, dimension_entity, &mut commands, &mut images);
                     }
