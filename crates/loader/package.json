@@ -1,0 +1,18 @@
+{
+  "name": "loader",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^1.4.0"
+  },
+  "devDependencies": {
+    "parcel": "^2.9.3"
+  }
+}
