@@ -40,8 +40,27 @@ Rust was the obvious choice for this project. First because it's a [pretty neat 
 
 1. Install [rustup](https://rustup.rs/)
 2. Follow [these installation steps for GTK4](https://gtk-rs.org/gtk4-rs/stable/latest/book/installation.html)
+3. Install node + yarn
+4. Run `yarn` in the root directory
+5. Run `cargo install tauri-cli`
 
-### Run Harmony Browser 
+### Run Browser Loader
+
+The Harmony Browser Loader is a tauri app that loads the browser and provides useful controls including automatic building and hot-reloading of wraps for development.
+
+Run the following command:
+
+```sh
+cargo tauri dev
+```
+
+### Recommended IDE Setup
+
+- [VS Code](https://code.visualstudio.com/)
+    - [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+    - [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode)
+
+### Run Browser directly (Not recommended)
 
 Run the following command:
 
@@ -49,7 +68,7 @@ Run the following command:
 cargo run
 ```
 
-### How to build wraps
+### How to build wraps directly (Not recommended)
 
 Run the following command:
 
