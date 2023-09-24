@@ -46,7 +46,10 @@ impl State {
     }
 
     pub fn initiate<R: tauri::Runtime>(&self, handle: tauri::AppHandle<R>) {
-        let mut inner = self.0.lock().expect("failed to lock state 2");
+        let mut inner = self
+            .0
+            .lock()
+            .expect("failed to lock() in State::initiate 1");
         let mut receive_task_update = inner
             .receive_task_update
             .take()
@@ -57,7 +60,9 @@ impl State {
         tauri::async_runtime::spawn(async move {
             while let Some(status) = receive_task_update.recv().await {
                 if status.is_completed() {
-                    let mut inner = inner_clone.lock().expect("failed to lock state 2");
+                    let mut inner = inner_clone
+                        .lock()
+                        .expect("failed to lock() in State::initiate 2");
 
                     // Remove completed task from the active list
                     inner
@@ -78,7 +83,10 @@ impl State {
     }
 
     pub fn enqueue_task(&self, task: task::Task) {
-        let mut inner = self.0.lock().expect("failed to lock state 3");
+        let mut inner = self
+            .0
+            .lock()
+            .expect("failed to lock() in State::enqueue_task");
         let task = Some(task);
 
         // Replace any duplicates on the queue with a None (no need for expensive reordering)
