@@ -12,7 +12,10 @@
   },
   "tauri": {
     "allowlist": {
-      "all": false
+      "all": false,
+      "window": {
+        "show": true
+      }
     },
     "bundle": {
       "active": true,
@@ -33,6 +36,7 @@
       {
         "fullscreen": false,
         "resizable": true,
+        "visible": false,
         "title": "Harmony Browser Loader",
         "width": 600,
         "height": 800

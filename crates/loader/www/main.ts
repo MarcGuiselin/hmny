@@ -1,4 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
+import { appWindow } from "@tauri-apps/api/window";
 
 type TaskStatus = {
   title: string;
@@ -115,4 +116,5 @@ listen<TaskStatus[]>("loader_status_update", ({ payload: statuses }) => {
 
 window.addEventListener("DOMContentLoaded", () => {
   console.log("DOMContentLoaded");
+  appWindow.show();
 });
