@@ -1,6 +1,9 @@
-use std::{collections::VecDeque, sync::Arc};
+use std::{
+    collections::VecDeque,
+    sync::{Arc, Mutex, MutexGuard},
+};
 use tauri::Manager;
-use tokio::sync::{mpsc, Mutex, MutexGuard};
+use tokio::sync::mpsc;
 
 use crate::task;
 
@@ -42,8 +45,8 @@ impl State {
         Self(Arc::new(Mutex::new(inner)))
     }
 
-    pub async fn initiate<R: tauri::Runtime>(&self, handle: tauri::AppHandle<R>) {
-        let mut inner = self.0.lock().await;
+    pub fn initiate<R: tauri::Runtime>(&self, handle: tauri::AppHandle<R>) {
+        let mut inner = self.0.lock().expect("failed to lock state 2");
         let mut receive_task_update = inner
             .receive_task_update
             .take()
@@ -54,7 +57,7 @@ impl State {
         tauri::async_runtime::spawn(async move {
             while let Some(status) = receive_task_update.recv().await {
                 if status.is_completed() {
-                    let mut inner = inner_clone.lock().await;
+                    let mut inner = inner_clone.lock().expect("failed to lock state 2");
 
                     // Remove completed task from the active list
                     inner
@@ -74,8 +77,8 @@ impl State {
         process_queue(inner);
     }
 
-    pub async fn enqueue_task(&self, task: task::Task) {
-        let mut inner = self.0.lock().await;
+    pub fn enqueue_task(&self, task: task::Task) {
+        let mut inner = self.0.lock().expect("failed to lock state 3");
         let task = Some(task);
 
         // Replace any duplicates on the queue with a None (no need for expensive reordering)

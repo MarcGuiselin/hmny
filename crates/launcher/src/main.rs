@@ -20,11 +20,13 @@ fn main() {
             invoke::compile_wrap
         ])
         .setup(move |app| {
+            let state = state.clone();
+
             // Always start by building wraps
-            let _ = state.enqueue_task(task::Task::Dev(task::Dev::Cargo(task::Cargo::BuildWraps)));
+            state.enqueue_task(task::Task::Dev(task::Dev::Cargo(task::Cargo::BuildWraps)));
 
             // Start listening for task updates
-            let _ = state.initiate(app.handle());
+            state.clone().initiate(app.handle());
 
             Ok(())
         })
