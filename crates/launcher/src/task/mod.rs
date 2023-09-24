@@ -33,7 +33,7 @@ impl Task {
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct Status {
-    id: Uuid,
+    pub id: Uuid,
     pub title: String,
     pub status: Option<String>,
     pub done_ratio: f32,
