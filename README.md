@@ -44,9 +44,9 @@ Rust was the obvious choice for this project. First because it's a [pretty neat 
 4. Run `yarn` in the root directory
 5. Run `cargo install tauri-cli`
 
-### Run Browser Loader
+### Run Browser Launcher
 
-The Harmony Browser Loader is a tauri app that loads the browser and provides useful controls including automatic building and hot-reloading of wraps for development.
+The Harmony Browser Launcher is a tauri app that loads the browser and provides useful controls including automatic building and hot-reloading of wraps for development.
 
 Run the following command:
 

@@ -3052,7 +3052,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "hmny_loader"
+name = "hmny_launcher"
 version = "0.0.1-dev"
 dependencies = [
  "serde",
