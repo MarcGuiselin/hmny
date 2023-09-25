@@ -1,7 +1,10 @@
 import { listen } from "@tauri-apps/api/event";
 import { appWindow } from "@tauri-apps/api/window";
 
-type TaskStatus = {
+type Handle = string;
+
+type Status = {
+  handle: Handle;
   title: string;
   status: string | null;
   done_ratio: number;
@@ -16,6 +19,10 @@ type Task = {
   $loader?: HTMLSpanElement;
   $doing: HTMLDivElement;
   $done: HTMLDivElement;
+};
+
+type TaskWithStatus = Task & {
+  status: Status;
 };
 
 const createTaskNode = (overall = false): Task => {
@@ -69,49 +76,46 @@ const createTaskNode = (overall = false): Task => {
 
 const $taskMenu = document.getElementById("task-menu") as HTMLDivElement;
 const $tasks = document.getElementById("tasks") as HTMLUListElement;
-const tasks: Task[] = [];
+const tasks: Map<Handle, TaskWithStatus> = new Map();
 const taskOverall = createTaskNode(true);
 
-listen<TaskStatus[]>("loader_status_update", ({ payload: statuses }) => {
-  console.log("loader_status_update", statuses);
-
-  // Creates any missing tasks
-  for (let i = tasks.length; i < statuses.length; i++) {
-    tasks.push(createTaskNode());
-  }
-
-  // Delete any extra tasks
-  while (tasks.length > statuses.length) {
-    const task = tasks.pop();
-    if (task) {
-      $tasks.removeChild(task.$parent);
-    }
+listen<Status>("loader_status_update", ({ payload: status }) => {
+  // Get or create task
+  let task = tasks.get(status.handle);
+  if (!task) {
+    task = {
+      status,
+      ...createTaskNode(),
+    };
+    tasks.set(status.handle, task);
   }
 
   // Update task progress
-  for (let i = 0; i < statuses.length; i++) {
-    const task = tasks[i];
-    const status = statuses[i];
-    const completed = status.done_ratio == 1;
-
-    task.$title.textContent = status.title;
-    task.$status.textContent = status.error || status.status || "";
-    const width = `${(status.done_ratio * 100).toFixed(2)}%`;
-    task.$done.style.width = width;
-    task.$doing.style.left = width;
-    task.$doing.style.right = `${(status.doing_ratio * 100).toFixed(2)}%`;
-    if (task.$loader) {
-      task.$loader.style.opacity = completed ? "0" : "1";
-    }
+  const completed = status.done_ratio == 1;
+  task.$title.textContent = status.title;
+  task.$status.textContent = status.error || status.status || "";
+  const width = `${(status.done_ratio * 100).toFixed(2)}%`;
+  task.$done.style.width = width;
+  task.$doing.style.left = width;
+  task.$doing.style.right = `${(status.doing_ratio * 100).toFixed(2)}%`;
+  if (task.$loader) {
+    task.$loader.style.opacity = completed ? "0" : "1";
   }
 
   // Update overall progress
-  const completed = statuses.filter((status) => status.done_ratio === 1).length;
-  taskOverall.$title.textContent = `${completed} of ${statuses.length} Completed`;
-  taskOverall.$done.style.width = `${(
-    (completed / statuses.length) *
-    100
-  ).toFixed(2)}%`;
+  const tasksArray = Array.from(tasks.values());
+  const tasksCount = tasksArray.length;
+  taskOverall.$parent.style.visibility = tasksCount ? "visible" : "hidden";
+  if (tasksCount) {
+    const completedCount = tasksArray.filter(
+      (task) => task.status.done_ratio == 1
+    ).length;
+    taskOverall.$title.textContent = `${completedCount} of ${tasksCount} Completed`;
+    taskOverall.$done.style.width = `${(
+      (completedCount / tasksCount) *
+      100
+    ).toFixed(2)}%`;
+  }
 });
 
 window.addEventListener("DOMContentLoaded", () => {
