@@ -32,10 +32,6 @@ impl Handle {
     pub fn new() -> Self {
         Self(Uuid::new_v4())
     }
-
-    pub fn id(&self) -> Uuid {
-        self.0
-    }
 }
 
 impl Task {
