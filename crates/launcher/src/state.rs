@@ -87,6 +87,7 @@ impl State {
             .0
             .lock()
             .expect("failed to lock() in State::enqueue_task");
+
         let task = Some(task);
 
         // Replace any duplicates on the queue with a None (no need for expensive reordering)
@@ -105,9 +106,13 @@ impl State {
 fn process_queue(mut inner: MutexGuard<'_, Inner>) {
     if !inner.is_initiated() {
         while inner.active_tasks.len() < MAX_CONCURRENT_TASKS {
-            if let Some(Some(task)) = inner.task_queue.pop_front() {
-                let send_task_update = inner.send_task_update.clone();
-                inner.active_tasks.push(task.into_active(send_task_update));
+            match inner.task_queue.pop_front() {
+                None => break,
+                Some(None) => {}
+                Some(Some(task)) => {
+                    let send_task_update = inner.send_task_update.clone();
+                    inner.active_tasks.push(task.into_active(send_task_update));
+                }
             }
         }
     }
