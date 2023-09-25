@@ -20,8 +20,8 @@ impl Clone for State {
 struct Inner {
     task_queue: VecDeque<Option<task::Task>>,
     active_tasks: Vec<task::ActiveTask>,
-    send_task_update: mpsc::Sender<task::Status>,
-    receive_task_update: Option<mpsc::Receiver<task::Status>>,
+    send_task_update: task::StatusSender,
+    receive_task_update: Option<task::StatusReceiver>,
 }
 
 impl Inner {

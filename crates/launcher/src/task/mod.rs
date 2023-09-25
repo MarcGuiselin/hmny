@@ -19,6 +19,9 @@ pub enum Cargo {
     BuildWraps,
 }
 
+pub type StatusSender = mpsc::Sender<Status>;
+pub type StatusReceiver = mpsc::Receiver<Status>;
+
 impl Task {
     pub fn into_active(self, send_task_update: mpsc::Sender<Status>) -> ActiveTask {
         match self {
