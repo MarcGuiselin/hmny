@@ -1,13 +1,13 @@
-pub use super::{Cargo, Ready, Status, StatusSender};
+pub use super::{Cargo, Handle, Status, StatusSender};
 
 mod command;
 pub use command::{package_dependency_count, CargoCommand};
 
 mod build_wraps;
 
-pub fn create_ready(kind: Cargo, send_task_update: StatusSender) -> Ready {
+pub fn start_task(kind: Cargo, send_task_update: StatusSender) -> Handle {
     match kind {
-        Cargo::BuildWraps => build_wraps::create_ready(send_task_update),
+        Cargo::BuildWraps => build_wraps::start_task(send_task_update),
         _ => unimplemented!(),
     }
 }

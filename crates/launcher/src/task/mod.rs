@@ -24,39 +24,36 @@ pub enum Cargo {
 pub type StatusSender = mpsc::Sender<Status>;
 pub type StatusReceiver = mpsc::Receiver<Status>;
 
-pub type Active = Box<dyn Send + Sync>;
-
 /// A task that is ready to be turned into an active task
-pub struct Ready {
-    id: Uuid,
-    active: Active,
-}
-impl Ready {
-    pub fn new(id: Uuid, active: Active) -> Self {
-        Self { id, active }
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct Handle(Uuid);
+
+impl Handle {
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+
+    pub fn id(&self) -> Uuid {
+        self.0
     }
 }
 
 impl Task {
     pub fn into_active(self, send_task_update: mpsc::Sender<Status>) -> ActiveTask {
-        let Ready { id, active } = match self.clone() {
+        let handle = match self.clone() {
             Task::Dev(dev) => match dev {
-                Dev::Cargo(kind) => cargo::create_ready(kind, send_task_update),
+                Dev::Cargo(kind) => cargo::start_task(kind, send_task_update),
                 Dev::CompileWrap { name } => unimplemented!(),
             },
         };
 
-        ActiveTask {
-            id,
-            task: self,
-            active,
-        }
+        ActiveTask { handle, task: self }
     }
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct Status {
-    pub id: Uuid,
+    pub handle: Handle,
     pub title: String,
     pub status: Option<String>,
     pub done_ratio: f32,
@@ -66,7 +63,7 @@ pub struct Status {
 
 impl PartialEq for Status {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
+        self.handle == other.handle
     }
 }
 
@@ -77,7 +74,6 @@ impl Status {
 }
 
 pub struct ActiveTask {
-    pub id: Uuid,
+    pub handle: Handle,
     pub task: Task,
-    active: Active,
 }

@@ -1,16 +1,14 @@
-use super::{package_dependency_count, CargoCommand, Ready, Status, StatusSender};
+use super::{package_dependency_count, CargoCommand, Handle, Status, StatusSender};
 use std::{io::Result, process::Stdio, sync::Arc};
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
     sync::Mutex,
 };
-use uuid::Uuid;
 
 const PACKAGES: &'static [&'static str] = &["homescreen_default", "mimetype_markdown", "test_wrap"];
 
-#[derive(Default)]
 struct Inner {
-    id: Uuid,
+    handle: Handle,
     error: Option<String>,
     log: String,
     max: usize,
@@ -18,11 +16,15 @@ struct Inner {
     is_compiling: bool,
 }
 
-pub fn create_ready(update_sender: StatusSender) -> Ready {
-    let id = Uuid::new_v4();
+pub fn start_task(update_sender: StatusSender) -> Handle {
+    let handle = Handle::new();
     let inner = Arc::new(Mutex::new(Inner {
-        id,
-        ..Inner::default()
+        handle: handle.clone(),
+        error: None,
+        log: String::new(),
+        max: 0,
+        completed: 0,
+        is_compiling: false,
     }));
 
     let inner_handle = Arc::clone(&inner);
@@ -36,7 +38,7 @@ pub fn create_ready(update_sender: StatusSender) -> Ready {
         }
     });
 
-    Ready::new(id, Box::new(inner))
+    handle
 }
 
 async fn initiate(update_sender: StatusSender, inner_handle: &Arc<Mutex<Inner>>) -> Result<()> {
@@ -120,7 +122,7 @@ fn get_status(inner: &Inner) -> Status {
     let doing_ratio = (inner.completed as f32 + if inner.is_compiling { 1. } else { 0. }) / max;
 
     Status {
-        id: inner.id,
+        handle: inner.handle.clone(),
         title,
         status,
         done_ratio,
