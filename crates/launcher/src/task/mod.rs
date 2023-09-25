@@ -1,5 +1,7 @@
 use tokio::sync::mpsc;
-use uuid::{uuid, Uuid};
+use uuid::Uuid;
+
+mod cargo;
 
 #[derive(Clone, PartialEq, Debug, Eq)]
 pub enum Task {
@@ -22,14 +24,32 @@ pub enum Cargo {
 pub type StatusSender = mpsc::Sender<Status>;
 pub type StatusReceiver = mpsc::Receiver<Status>;
 
+pub type Active = Box<dyn Send + Sync>;
+
+/// A task that is ready to be turned into an active task
+pub struct Ready {
+    id: Uuid,
+    active: Active,
+}
+impl Ready {
+    pub fn new(id: Uuid, active: Active) -> Self {
+        Self { id, active }
+    }
+}
+
 impl Task {
     pub fn into_active(self, send_task_update: mpsc::Sender<Status>) -> ActiveTask {
-        match self {
+        let Ready { id, active } = match self.clone() {
             Task::Dev(dev) => match dev {
-                Dev::Cargo(Cargo::CleanWraps) => unimplemented!(),
-                Dev::Cargo(Cargo::BuildWraps) => unimplemented!(),
+                Dev::Cargo(kind) => cargo::create_ready(kind, send_task_update),
                 Dev::CompileWrap { name } => unimplemented!(),
             },
+        };
+
+        ActiveTask {
+            id,
+            task: self,
+            active,
         }
     }
 }
@@ -56,12 +76,8 @@ impl Status {
     }
 }
 
-pub trait Active: Send + Sync {
-    fn get_status(&self) -> Status;
-}
-
 pub struct ActiveTask {
-    task: Task,
-    active: Box<dyn Active>,
-    pub status: Status,
+    pub id: Uuid,
+    pub task: Task,
+    active: Active,
 }

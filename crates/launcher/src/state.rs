@@ -67,7 +67,7 @@ impl State {
                     // Remove completed task from the active list
                     inner
                         .active_tasks
-                        .retain(|active_task| active_task.status != status);
+                        .retain(|active_task| active_task.id != status.id);
 
                     // Process the queue
                     process_queue(inner);
