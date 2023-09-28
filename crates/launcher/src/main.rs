@@ -18,12 +18,8 @@ fn main() {
         .setup(move |app| {
             let state = state.clone();
 
-            println!("will freeze");
-
             // Always start by building wraps
             state.enqueue_task(task::Task::Dev(task::Dev::Cargo(task::Cargo::BuildWraps)));
-
-            println!("weird. didn't freeze");
 
             // Start listening for task updates
             state.clone().initiate(app.handle());
