@@ -2,6 +2,7 @@ use tokio::sync::mpsc;
 use uuid::Uuid;
 
 mod cargo;
+pub use cargo::Cargo;
 
 #[derive(Clone, PartialEq, Debug, Eq)]
 pub enum Task {
@@ -13,12 +14,6 @@ pub enum Task {
 pub enum Dev {
     Cargo(Cargo),
     CompileWrap { name: String },
-}
-
-#[derive(Clone, PartialEq, Debug, Eq)]
-pub enum Cargo {
-    CleanWraps,
-    BuildWraps,
 }
 
 pub type StatusSender = mpsc::Sender<Status>;

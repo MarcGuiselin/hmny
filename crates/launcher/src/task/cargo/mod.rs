@@ -1,7 +1,13 @@
-pub use super::{Cargo, Handle, Status, StatusSender};
+pub use super::{Handle, Status, StatusSender};
 
 mod command;
 pub use command::{package_dependency_count, CargoCommand};
+
+#[derive(Clone, PartialEq, Debug, Eq)]
+pub enum Cargo {
+    CleanWraps,
+    BuildWraps,
+}
 
 mod build_wraps;
 
