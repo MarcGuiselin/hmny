@@ -1,4 +1,5 @@
-use std::{collections::HashSet, io::Result, path::Path, process::Command, str};
+use std::{collections::HashSet, io::Result, path::Path, str};
+use tokio::process::Command;
 
 pub struct CargoCommand {
     pub command: Command,
@@ -24,7 +25,7 @@ impl CargoCommand {
     }
 }
 
-pub fn package_dependency_count(packages: &[&str]) -> Result<usize> {
+pub async fn package_dependency_count(packages: &[&str]) -> Result<usize> {
     let output = CargoCommand::new("tree")
         .args(&[
             "--edges",
@@ -36,7 +37,8 @@ pub fn package_dependency_count(packages: &[&str]) -> Result<usize> {
         ])
         .packages(packages)
         .command
-        .output()?;
+        .output()
+        .await?;
 
     // Turns out that tree might list the same dependency multiple times, so we need to deduplicate
     let mut deps = HashSet::new();
