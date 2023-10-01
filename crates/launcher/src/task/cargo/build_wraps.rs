@@ -55,6 +55,12 @@ async fn initiate(update_sender: StatusSender, inner_handle: &Arc<Mutex<Inner>>)
         .args(&["--target", "wasm32-unknown-unknown", "-r", "--verbose"])
         .packages(PACKAGES)
         .command
+        // Build flags needed to build wraps
+        // See: https://github.com/polywrap/cli/blob/origin-dev/packages/cli/src/lib/defaults/build-strategies/wasm/rust/local/local.sh
+        .env(
+            "RUSTFLAGS",
+            "-C link-arg=-z -C link-arg=stack-size=65536 -C link-arg=--import-memory",
+        )
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()?;
