@@ -5,7 +5,7 @@ use tokio::{
     sync::Mutex,
 };
 
-const PACKAGES: &'static [&'static str] = &["homescreen_default", "mimetype_markdown", "test_wrap"];
+pub const PACKAGES: &'static [&'static str] = &["test_wrap"];
 
 struct Inner {
     handle: Handle,
