@@ -18,6 +18,9 @@ fn main() {
         .setup(move |app| {
             let state = state.clone();
 
+            // Clean wraps on startup
+            state.enqueue_task(task::Task::Dev(task::Dev::Cargo(task::Cargo::CleanWraps)));
+
             // Always start by building wraps
             state.enqueue_task(task::Task::Dev(task::Dev::Cargo(task::Cargo::BuildWraps)));
 
