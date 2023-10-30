@@ -104,7 +104,7 @@ impl State {
 }
 
 fn process_queue(mut inner: MutexGuard<'_, Inner>) {
-    if !inner.is_initiated() {
+    if inner.is_initiated() {
         while inner.active_tasks.len() < MAX_CONCURRENT_TASKS {
             match inner.task_queue.pop_front() {
                 None => break,
