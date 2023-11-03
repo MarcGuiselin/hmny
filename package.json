@@ -1,4 +1,4 @@
 {
   "private": true,
-  "workspaces": ["crates/launcher"]
+  "workspaces": ["crates/launcher", "wraps/test"]
 }

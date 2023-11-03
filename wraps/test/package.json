@@ -1,0 +1,13 @@
+{
+    "name": "test_wrap",
+    "private": true,
+    "version": "0.0.1-dev",
+    "scripts": {
+      "codegen": "npx polywrap codegen",
+      "build": "npx polywrap build"
+    },
+    "devDependencies": {
+      "polywrap": "0.12.0"
+    }
+  }
+  

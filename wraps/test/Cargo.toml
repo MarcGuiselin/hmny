@@ -7,4 +7,9 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-hmny_common = { path = "../../crates/common" }
+polywrap-wasm-rs = { version = "0.12.0" }
+polywrap_msgpack_serde = "0.0.2-beta.7"
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+polywrap = { version = "0.1.9-beta.2" }

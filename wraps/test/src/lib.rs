@@ -1,19 +1,17 @@
-use hmny_common::prelude::*;
+#![allow(unused)]
 
-#[define_wrap{
-    publisher: Publisher::new("Harmony", vec![]),
-    wrap_type: WrapType::Test,
-    common_query: match query {
-        CommonQuery::Ping { message } => ping(message),
+pub mod wrap;
+pub use wrap::prelude::*;
+
+const WRAP_NAME: &str = env!("CARGO_CRATE_NAME");
+
+impl ModuleTrait for Module {
+    fn ping(args: ArgsPing) -> Result<PongResult, String> {
+        Ok(PongResult {
+            response: format!(
+                r#"Greetings "{}"! I am {}, the wrap. Pleasure to meet you :)"#,
+                args.message, WRAP_NAME
+            ),
+        })
     }
-}]
-struct TestWrap(CommonQuery);
-
-fn ping(message: String) -> CommonResult {
-    let response = format!(
-        r#"Greetings "{}"! I am {}, the wrap. Pleasure to meet you :)"#,
-        message, WRAP_NAME
-    );
-
-    Ok(CommonResponse::Pong { response })
 }

@@ -1,0 +1,7 @@
+type Module {
+    ping(message: String!): PongResult!
+}
+
+type PongResult {
+    response: String!
+}
