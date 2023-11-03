@@ -3,6 +3,8 @@ use uuid::Uuid;
 
 mod cargo;
 pub use cargo::Cargo;
+mod polywrap;
+pub use polywrap::Polywrap;
 
 #[derive(Clone, PartialEq, Debug, Eq)]
 pub enum Task {
@@ -13,7 +15,7 @@ pub enum Task {
 #[derive(Clone, PartialEq, Debug, Eq)]
 pub enum Dev {
     Cargo(Cargo),
-    CompileWrap { name: String },
+    Polywrap(Polywrap),
 }
 
 pub type StatusSender = mpsc::Sender<Status>;
@@ -34,7 +36,7 @@ impl Task {
         let handle = match self.clone() {
             Task::Dev(dev) => match dev {
                 Dev::Cargo(kind) => cargo::start_task(kind, send_task_update),
-                Dev::CompileWrap { name } => unimplemented!(),
+                Dev::Polywrap(kind) => polywrap::start_task(kind, send_task_update),
             },
         };
 

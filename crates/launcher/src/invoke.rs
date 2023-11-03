@@ -19,7 +19,7 @@ pub async fn build_wraps(state: State<'_>) -> Result<()> {
 
 #[tauri::command]
 pub async fn compile_wrap(name: String, state: State<'_>) -> Result<()> {
-    state.enqueue_task(Task::Dev(Dev::CompileWrap { name }));
+    state.enqueue_task(Task::Dev(Dev::Polywrap(Polywrap::CompileWrap { name })));
 
     Ok(())
 }

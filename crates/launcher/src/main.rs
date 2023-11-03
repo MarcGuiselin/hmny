@@ -1,5 +1,6 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use notify::{RecommendedWatcher, Watcher};
 
 mod invoke;
 mod state;
@@ -7,6 +8,40 @@ mod task;
 
 fn main() {
     let state = state::State::new();
+
+    // Clean wraps on startup
+    state.enqueue_task(task::Task::Dev(task::Dev::Cargo(task::Cargo::CleanWraps)));
+
+    // Always start by building wraps
+    state.enqueue_task(task::Task::Dev(task::Dev::Cargo(task::Cargo::BuildWraps)));
+
+    // Watch for changes to the wraps directory
+    let state_clone = state.clone();
+    let mut watcher = RecommendedWatcher::new(
+        move |res: Result<notify::Event, notify::Error>| match res {
+            Ok(event) => {
+                if event.kind.is_create() || event.kind.is_modify() {
+                    let path = event.paths.first().unwrap();
+                    if path.extension() == Some("wasm".as_ref()) {
+                        state_clone.enqueue_task(task::Task::Dev(task::Dev::Polywrap(
+                            task::Polywrap::CompileWrap {
+                                name: path.file_stem().unwrap().to_str().unwrap().to_string(),
+                            },
+                        )));
+                    }
+                }
+            }
+            Err(e) => println!("watch error: {:?}", e),
+        },
+        notify::Config::default(),
+    )
+    .expect("failed to create watcher");
+    watcher
+        .watch(
+            "../../target/wasm32-unknown-unknown/release".as_ref(),
+            notify::RecursiveMode::NonRecursive,
+        )
+        .expect("failed to watch path");
 
     tauri::Builder::default()
         .manage(state.clone())
@@ -16,16 +51,8 @@ fn main() {
             invoke::compile_wrap
         ])
         .setup(move |app| {
-            let state = state.clone();
-
-            // Clean wraps on startup
-            state.enqueue_task(task::Task::Dev(task::Dev::Cargo(task::Cargo::CleanWraps)));
-
-            // Always start by building wraps
-            state.enqueue_task(task::Task::Dev(task::Dev::Cargo(task::Cargo::BuildWraps)));
-
             // Start listening for task updates
-            state.clone().initiate(app.handle());
+            state.initiate(app.handle());
 
             Ok(())
         })
