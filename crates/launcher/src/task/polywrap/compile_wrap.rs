@@ -1,3 +1,5 @@
+use crate::task::cargo::CargoCommand;
+
 use super::{Handle, Status, StatusSender};
 use std::{
     env,
@@ -17,24 +19,28 @@ use tokio::{fs, process::Command, sync::Mutex};
 /// - Crate type of wrap should be `cdylib`
 /// - Build with flags (see ../cargo/build_wraps.rs)
 ///
-/// Step 1: Run wasm-bindgen over the module, replacing all placeholder __wbindgen_... imports
+/// Step 1: Generate Wrap Manifest
+/// - Command: `yarn polywrap build --strategy local --no-codegen --manifest-file {} --output-dir {}`
+///
+/// Step 2: Run wasm-bindgen over the module, replacing all placeholder __wbindgen_... imports
 /// - Env: WASM_INTERFACE_TYPES=1
 /// - Command: `wasm-bindgen "$1"/target/wasm32-unknown-unknown/release/module.wasm --out-dir "$2" --out-name bg_module.wasm`
 ///
-/// Step 2: Run wasm-tools strip to remove the wasm-interface-types custom section
+/// Step 3: Run wasm-tools strip to remove the wasm-interface-types custom section
 /// - Command: `wasm-tools strip "$2"/bg_module.wasm -d wasm-interface-types -o "$2"/strip_module.wasm`
 /// - Command: `rm -rf "$2"/bg_module.wasm`
 ///
-/// Step 3: Run wasm-snip to trip down the size of the binary, removing any dead code
+/// Step 4: Run wasm-snip to trip down the size of the binary, removing any dead code
 /// - Command: `wasm-snip "$2"/strip_module.wasm -o "$2"/snipped_module.wasm`
 /// - Command: `rm -rf "$2"/strip_module.wasm`
 ///
-/// Step 4: Use wasm-opt to perform the "asyncify" post-processing step over all modules
+/// Step 5: Use wasm-opt to perform the "asyncify" post-processing step over all modules
 /// - Env: ASYNCIFY_STACK_SIZE=24576
 /// - Command: `wasm-opt --asyncify -Os "$2"/snipped_module.wasm -o "$2"/wrap.wasm`
 /// - Command: `rm -rf "$2"/snipped_module.wasm`
 #[derive(Debug)]
 enum Step {
+    Manifest,
     Bindgen,
     Strip,
     Snip,
@@ -81,16 +87,71 @@ async fn initiate(
     name: String,
 ) -> Result<()> {
     let wasm_source_path = format!("../../target/wasm32-unknown-unknown/release/{}.wasm", name);
-    let work_dir = format!("../../target/polywrap/temp/{}", name);
-    let output_dir = "../../target/polywrap";
-    let wasm_output_path = format!("{}/{}.wasm", output_dir, name);
+    let work_dir = format!("../../target/polywrap/artifacts/{}", name);
+    let output_dir = format!("../../target/polywrap/release/{}", name);
+    let wasm_output_path = format!("{}/wrap.wasm", output_dir);
     let bindgen_output_path = format!("{}/bg_module.wasm", work_dir);
     let strip_output_path = format!("{}/strip_module.wasm", work_dir);
     let snip_output_path = format!("{}/snipped_module.wasm", work_dir);
 
     // Step 1
-    send_status(&update_sender, &inner_handle, Step::Bindgen).await;
+    send_status(&update_sender, &inner_handle, Step::Manifest).await;
     delete_directory_contents(&work_dir).await?;
+    delete_directory_contents(&output_dir).await?;
+    fs::create_dir_all(&output_dir).await?;
+    let yarn_executable_path = which::which("yarn")
+        .map_err(|_| Error::new(ErrorKind::Other, "`yarn` command not found in PATH."))?;
+    let package_path = {
+        #[derive(serde::Deserialize)]
+        struct Metadata {
+            packages: Vec<Package>,
+        }
+
+        #[derive(serde::Deserialize)]
+        struct Package {
+            name: String,
+            manifest_path: String,
+        }
+
+        let output = CargoCommand::new("metadata")
+            .args(&["--no-deps"])
+            .command
+            .output()
+            .await?;
+
+        let metadata: Metadata = serde_json::from_slice(&output.stdout).unwrap();
+        let package = metadata
+            .packages
+            .into_iter()
+            .find(|package| package.name == name)
+            .ok_or(Error::new(
+                ErrorKind::Other,
+                format!("Could not find package '{}' in cargo metadata", name),
+            ))?;
+        Path::new(&package.manifest_path)
+            .parent()
+            .unwrap()
+            .to_path_buf()
+    };
+    let output_dir_full = env::current_dir()?.join(&output_dir);
+    let _ = Command::new(yarn_executable_path)
+        .args([
+            "polywrap",
+            "build",
+            // This is a hack right now: running with "local" strategy will always fail on windows
+            // This is good because I only need the manifest, and it will fail right after generating it
+            // TODO: Find a proper way to generate only the manifest or hack something together
+            "--strategy",
+            "local",
+            "--no-codegen",
+            "--output-dir",
+            output_dir_full.to_str().unwrap(),
+        ])
+        .current_dir(package_path)
+        .output()
+        .await?;
+
+    // Step 2
     run_command(
         Command::new("wasm-bindgen")
             .arg(&wasm_source_path)
@@ -101,7 +162,7 @@ async fn initiate(
     )
     .await?;
 
-    // Step 2
+    // Step 3
     send_status(&update_sender, &inner_handle, Step::Strip).await;
     run_command(
         Command::new("wasm-tools")
@@ -112,7 +173,7 @@ async fn initiate(
     )
     .await?;
 
-    // Step 3
+    // Step 4
     send_status(&update_sender, &inner_handle, Step::Snip).await;
     run_command(
         Command::new("wasm-snip")
@@ -122,7 +183,7 @@ async fn initiate(
     )
     .await?;
 
-    // Step 4
+    // Step 5
     send_status(&update_sender, &inner_handle, Step::Opt).await;
     let _ = fs::remove_file(&wasm_output_path).await;
     env::set_var("ASYNCIFY_STACK_SIZE", "24576");
@@ -179,10 +240,11 @@ fn get_status(inner: &Inner) -> Status {
     let title = format!("Compiling Wrap {}", inner.name);
     let status = None;
     let ratio = match inner.step {
-        Step::Bindgen => 0.0,
-        Step::Strip => 0.25,
-        Step::Snip => 0.5,
-        Step::Opt => 0.75,
+        Step::Manifest => 0.0,
+        Step::Bindgen => 0.2,
+        Step::Strip => 0.4,
+        Step::Snip => 0.6,
+        Step::Opt => 0.8,
         Step::Done => 1.0,
     };
 
