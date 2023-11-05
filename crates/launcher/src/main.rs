@@ -6,6 +6,8 @@ mod invoke;
 mod state;
 mod task;
 
+const CARGO_BUILD_WRAPS_DIR: &str = "../../target/wasm32-unknown-unknown/release";
+
 fn main() {
     let state = state::State::new();
 
@@ -36,9 +38,10 @@ fn main() {
         notify::Config::default(),
     )
     .expect("failed to create watcher");
+    let _ = std::fs::create_dir_all(CARGO_BUILD_WRAPS_DIR);
     watcher
         .watch(
-            "../../target/wasm32-unknown-unknown/release".as_ref(),
+            CARGO_BUILD_WRAPS_DIR.as_ref(),
             notify::RecursiveMode::NonRecursive,
         )
         .expect("failed to watch path");
