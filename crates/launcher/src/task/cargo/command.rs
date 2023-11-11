@@ -7,26 +7,10 @@ pub struct CargoCommand {
 
 impl CargoCommand {
     pub fn new(kind: &str) -> Self {
-        // Command is: rustup run stable cargo <kind>
-        let mut command = Self::new_raw_command("stable");
-        command.arg(kind);
-        Self { command }
-    }
-
-    pub fn new_nightly(kind: &str) -> Self {
-        // Command is: rustup run nightly cargo <kind>
-        let mut command = Self::new_raw_command("nightly");
-        command.arg(kind);
-        Self { command }
-    }
-
-    fn new_raw_command(toolchain: &str) -> Command {
-        // Command is: rustup run <toolchain> cargo
-        let rustup_executable_path = which::which("rustup").expect("Failed to find rustup");
-        let mut command = Command::new(rustup_executable_path);
+        let mut command = Command::new("cargo");
         command.current_dir(Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."));
-        command.args(&["run", toolchain, "cargo"]);
-        command
+        command.arg(kind);
+        Self { command }
     }
 
     pub fn args(&mut self, args: &[&str]) -> &mut Self {

@@ -41,30 +41,17 @@ pub fn start_task(update_sender: StatusSender) -> Handle {
     handle
 }
 
-// I'm not able to get package_dependency_count to count correctly now that std is being rebuilt
-// But from a test it's only 17 extra steps, so we'll just hardcode it for now
-const STD_BUILD_STEPS: usize = 17;
-
 async fn initiate(update_sender: StatusSender, inner_handle: &Arc<Mutex<Inner>>) -> Result<()> {
     {
         let max = package_dependency_count(PACKAGES).await?;
         let mut inner = inner_handle.lock().await;
-        inner.max = max + STD_BUILD_STEPS;
+        inner.max = max;
 
         // Send the first update
         update_sender.send(get_status(&inner)).await.unwrap();
     }
 
-    let mut child: tokio::process::Child = CargoCommand::new_nightly("build")
-        // Optimization flags needed to build wraps
-        // See: https://github.com/rust-lang/rust/issues/54981#issuecomment-899917784
-        .args(&[
-            "-Z",
-            "build-std=std,panic_abort",
-            "-Z",
-            "build-std-features=panic_immediate_abort",
-        ])
-        // Flags targeting wraps
+    let mut child: tokio::process::Child = CargoCommand::new("build")
         .args(&["--target", "wasm32-unknown-unknown", "-r", "--verbose"])
         .packages(PACKAGES)
         .command
@@ -119,11 +106,9 @@ fn handle_stream<R: tokio::io::AsyncRead + Unpin + Send + 'static>(
                 } else if line.starts_with("Fresh") {
                     inner.completed += 1;
                     changed = true;
-                } else if line.starts_with("Finished") {
-                    if inner.completed != inner.max {
-                        println!("Finished building wraps, but counter was wrong. Step count of {} did not match expected count {}", inner.completed, inner.max);
-                        inner.completed = inner.max;
-                    }
+                }
+                if line.starts_with("Finished") {
+                    inner.completed = inner.max;
                     changed = true;
                 }
 

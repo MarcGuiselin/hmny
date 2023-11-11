@@ -4,15 +4,10 @@ version = "0.0.1-dev"
 edition = "2021"
 
 [profile.release]
-strip = true
-opt-level = "s"
-debug = false
-rpath = false
 lto = true
-debug-assertions = false
+strip = true
+opt-level = "z"
 codegen-units = 1
-panic = 'abort'
-incremental = false
 
 [workspace]
 members = [
