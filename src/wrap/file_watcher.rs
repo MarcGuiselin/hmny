@@ -10,7 +10,7 @@ use std::{
     },
 };
 
-const WRAPS_LOAD_DIR: &str = "./target/wasm32-unknown-unknown/release";
+const WRAPS_LOAD_DIR: &str = "./target/polywrap";
 
 pub struct WrapFileWatcherPlugin;
 
@@ -59,7 +59,65 @@ impl Default for WrapFileWatcher {
     }
 }
 
+#[derive(serde::Serialize)]
+pub struct PingArgs {
+    pub message: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct PongResult {
+    pub response: String,
+}
+
+fn ping_test_wrap() {
+    use polywrap::*;
+
+    let start = std::time::Instant::now();
+    let mut config = ClientConfig::new();
+    config.add(SystemClientConfig::default().into());
+    let client = Client::new(config.build());
+    println!("Polywrap client created in {:?}", start.elapsed());
+
+    let start = std::time::Instant::now();
+    let add_file_resp = client
+        .invoke::<PongResult>(
+            &Uri::try_from("wrap://fs/C:/Users/Marc/Documents/Projects/Harmony/hmny/target/polywrap/release/test_wrap").unwrap(),
+            "ping",
+            Some(
+                &to_vec(&PingArgs {
+                    message: "Hello from Rust!".to_string(),
+                })
+                .unwrap(),
+            ),
+            None,
+            None,
+        )
+        .unwrap();
+    println!("Resolving wrap and invoking took {:?}", start.elapsed());
+    println!("Response to ping: '{}'", add_file_resp.response);
+
+    let start = std::time::Instant::now();
+    let add_file_resp = client
+        .invoke::<PongResult>(
+            &Uri::try_from("wrap://fs/C:/Users/Marc/Documents/Projects/Harmony/hmny/target/polywrap/release/test_wrap").unwrap(),
+            "ping",
+            Some(
+                &to_vec(&PingArgs {
+                    message: "Hello from Rust 2!".to_string(),
+                })
+                .unwrap(),
+            ),
+            None,
+            None,
+        )
+        .unwrap();
+    println!("Resolving wrap and invoking 2 took {:?}", start.elapsed());
+    println!("Response to ping 2: '{}'", add_file_resp.response);
+}
+
 fn wraps_load_from_dir_system(mut wraps: ResMut<Wraps>) {
+    ping_test_wrap();
+
     let paths = fs::read_dir(WRAPS_LOAD_DIR).expect("Failed to read wraps load directory");
 
     paths.into_iter().for_each(|path| {
@@ -67,10 +125,10 @@ fn wraps_load_from_dir_system(mut wraps: ResMut<Wraps>) {
 
         match path.extension() {
             Some(ext) if ext == "wasm" => {
-                if let Err(res) = wraps.load_from_path(path.clone()) {
-                    error!("Error while attempting to load plugin {:?}", path);
-                    error!("    {:?}", res);
-                }
+                // if let Err(res) = wraps.load_from_path(path.clone()) {
+                //     error!("Error while attempting to load plugin {:?}", path);
+                //     error!("    {:?}", res);
+                // }
             }
             _ => {}
         }
@@ -110,7 +168,7 @@ fn wraps_file_watcher_system(mut wraps: ResMut<Wraps>, file_watcher: Res<WrapFil
 impl Plugin for WrapFileWatcherPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<WrapFileWatcher>()
-            .add_systems(PreStartup, wraps_load_from_dir_system)
-            .add_systems(PostUpdate, wraps_file_watcher_system);
+            .add_systems(PreStartup, wraps_load_from_dir_system);
+        //.add_systems(PostUpdate, wraps_file_watcher_system);
     }
 }
