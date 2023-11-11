@@ -56,8 +56,6 @@ struct Inner {
 }
 
 pub fn start_task(update_sender: StatusSender, name: String) -> Handle {
-    println!("Starting compile wrap task for '{}'", name);
-
     let handle = Handle::new();
     let inner = Arc::new(Mutex::new(Inner {
         name: name.clone(),
