@@ -1,4 +1,3 @@
-use super::Wraps;
 use bevy::prelude::*;
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Result, Watcher};
 use std::{
@@ -115,7 +114,7 @@ fn ping_test_wrap() {
     println!("Response to ping 2: '{}'", add_file_resp.response);
 }
 
-fn wraps_load_from_dir_system(mut wraps: ResMut<Wraps>) {
+fn wraps_load_from_dir_system() {
     ping_test_wrap();
 
     let paths = fs::read_dir(WRAPS_LOAD_DIR).expect("Failed to read wraps load directory");
@@ -133,36 +132,6 @@ fn wraps_load_from_dir_system(mut wraps: ResMut<Wraps>) {
             _ => {}
         }
     });
-}
-
-fn wraps_file_watcher_system(mut wraps: ResMut<Wraps>, file_watcher: Res<WrapFileWatcher>) {
-    if let Ok(receiver) = file_watcher.inner.receiver.lock() {
-        loop {
-            let Event { kind, paths, .. } = match receiver.try_recv() {
-                Ok(result) => result.unwrap(),
-                Err(TryRecvError::Empty) => break,
-                Err(TryRecvError::Disconnected) => panic!("FilesystemWatcher disconnected."),
-            };
-
-            paths.iter().for_each(|path| {
-                // We only load wasm files for now
-                match path.extension() {
-                    Some(ext) if ext == "wasm" => match kind {
-                        EventKind::Create(_) => {
-                            wraps.load_from_path(path).unwrap();
-                        }
-                        EventKind::Remove(_) => {
-                            wraps.unload_from_path(path).unwrap();
-                        }
-                        _ => {
-                            warn!("Unknown file watcher event: {:?} {:?}", path, kind);
-                        }
-                    },
-                    _ => {}
-                }
-            });
-        }
-    }
 }
 
 impl Plugin for WrapFileWatcherPlugin {

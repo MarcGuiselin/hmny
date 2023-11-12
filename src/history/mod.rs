@@ -1,6 +1,5 @@
 use crate::canvas;
 use crate::canvas::layout;
-use crate::wrap::{WrapKey, Wraps};
 use bevy::prelude::*;
 use hmny_common::prelude::*;
 
@@ -8,37 +7,7 @@ pub struct HistoryPlugin;
 
 impl Plugin for HistoryPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup);
-    }
-}
-
-fn setup(mut wraps: ResMut<Wraps>, mut commands: Commands, mut images: ResMut<Assets<Image>>) {
-    match wraps.signal(WrapKey::HomeScreen, HomescreenQuery::AskHomeScreen) {
-        Ok(HomescreenResponse::HomeScreen { mime_type, data }) => {
-            info!(
-                r#"Load home screen with mimetype: "{}" data: "{:?}""#,
-                mime_type, data
-            );
-
-            match wraps.signal(
-                WrapKey::Mimetype(mime_type),
-                MimetypeQuery::AskParse { data },
-            ) {
-                Ok(MimetypeResponse::Dimension(dimension)) => {
-                    info!(r#"Loading dimension: "{:?}""#, dimension);
-                    let dimension_entity = commands.spawn(SpatialBundle::default()).id();
-                    for element in dimension.children.into_iter() {
-                        summon_element(element, dimension_entity, &mut commands, &mut images);
-                    }
-                }
-                other => {
-                    error!("Could not load dimension: {:?}", other);
-                }
-            }
-        }
-        other => {
-            error!("Could not load home screen data: {:?}", other);
-        }
+        // app.add_systems(Startup, setup);
     }
 }
 

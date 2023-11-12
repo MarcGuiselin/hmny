@@ -4045,9 +4045,10 @@ dependencies = [
  "notify",
  "pango 0.18.3",
  "pangocairo",
+ "polywrap",
+ "serde",
  "unic",
  "url 2.4.1",
- "wasmer",
  "yeslogic-fontconfig-sys",
 ]
 
