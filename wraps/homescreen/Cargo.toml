@@ -1,10 +1,10 @@
 [package]
+edition = "2021"
 name = "homescreen_default"
 version = "0.0.1-dev"
-edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-hmny_common = { path = "../../crates/common", default-features = false, features = ["homescreen"] }
+hmny_common = {path = "../../crates/common", default-features = false, features = ["homescreen"]}

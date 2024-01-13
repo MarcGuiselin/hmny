@@ -1,17 +1,17 @@
 [package]
+edition = "2021"
 name = "mimetype_markdown"
 version = "0.0.1-dev"
-edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
 
 [profile.release]
-lto = true
-strip = true
-opt-level = "z"
 codegen-units = 1
+lto = true
+opt-level = "z"
+strip = true
 
 [dependencies]
-hmny_common = { path = "../../../crates/common", default-features = false, features = ["mimetype"] }
+hmny_common = {path = "../../../crates/common", default-features = false, features = ["mimetype"]}
 markdown = "1.0.0-alpha.12"

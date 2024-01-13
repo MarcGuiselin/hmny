@@ -1,10 +1,10 @@
 [package]
+edition = "2021"
 name = "test_wrap"
 version = "0.0.1-dev"
-edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-hmny_common = { path = "../../crates/common" }
+hmny_common = {path = "../../crates/common"}
