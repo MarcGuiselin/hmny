@@ -14,4 +14,4 @@ strip = true
 
 [dependencies]
 hmny_common = {path = "../../../crates/common", default-features = false, features = ["mimetype"]}
-markdown = "1.0.0-alpha.12"
+markdown = "1.0.0-alpha.16"

@@ -11,6 +11,6 @@ homescreen = []
 mimetype = []
 
 [dependencies]
-bevy_math = "0.11.2"
-bincode = {git = "https://github.com/bincode-org/bincode.git", rev = "aada4bb4cb457677a4b8e47572ae7ca8dd44927c"}
+bevy_math = "0.12.1"
+bincode = {git = "https://github.com/bincode-org/bincode.git", rev = "980e4029552e416c1fd2f0699a78d33562b33966"}
 hmny_macros = {path = "../macros"}
